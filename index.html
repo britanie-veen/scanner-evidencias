@@ -17,72 +17,361 @@
       --border:  #E8E8E8;
       --muted:   #999999;
     }
-    body { font-family: 'Montserrat', -apple-system, sans-serif; background: var(--white); color: var(--black); min-height: 100dvh; }
-    #app { width: 100%; max-width: 430px; margin: 0 auto; }
-    .screen { display: none; flex-direction: column; align-items: center; padding: 40px 24px 52px; min-height: 100dvh; }
+    body {
+      font-family: 'Montserrat', -apple-system, sans-serif;
+      background: var(--white);
+      color: var(--black);
+      min-height: 100dvh;
+    }
+    #app {
+      width: 100%;
+      max-width: 430px;
+      margin: 0 auto;
+    }
+    /* ── Pantallas ─────────────────────────────────────────── */
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px 52px;
+      min-height: 100dvh;
+    }
     .screen.active { display: flex; }
-    #screen-loading, #screen-uploading { justify-content: center; }
-    .screen-header { width: 100%; display: flex; align-items: center; gap: 16px; margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
-    .back-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--black); padding: 4px 8px 4px 0; line-height: 1; font-weight: 900; }
-    .screen-header h2 { font-size: 13px; font-weight: 200; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
-    .logo-mark { font-size: clamp(160px, 45vw, 260px); font-weight: 900; line-height: .9; color: var(--black); letter-spacing: -.06em; }
-    .brand { font-size: 14px; font-weight: 200; color: var(--muted); letter-spacing: .25em; text-transform: uppercase; margin-top: 8px; }
-    .hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; margin-bottom: 32px; width: 100%; }
-    .state-icon { width: 88px; height: 88px; border-radius: 50%; background: var(--black); display: flex; align-items: center; justify-content: center; font-size: 38px; color: var(--white); font-weight: 900; margin-bottom: 8px; }
-    .state-icon.error { background: var(--white); border: 2px solid var(--black); color: var(--black); }
-    h1 { font-size: clamp(80px, 22vw, 130px); font-weight: 900; letter-spacing: -.03em; text-align: center; line-height: 1; text-transform: uppercase; }
-    h2 { font-size: 24px; font-weight: 900; letter-spacing: -.01em; text-align: center; text-transform: uppercase; }
-    .subtitle { font-size: 20px; font-weight: 200; color: var(--muted); text-align: center; line-height: 1.7; letter-spacing: .02em; }
-    .channel-pills { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; justify-content: center; }
-    .card { width: 100%; background: var(--surface); border-radius: 4px; padding: 0 20px; margin-bottom: 24px; }
-    .card-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); }
+    #screen-loading,
+    #screen-uploading { justify-content: center; }
+    /* ── Header con botón atrás ────────────────────────────── */
+    .screen-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--black);
+      padding: 4px 8px 4px 0;
+      line-height: 1;
+      font-weight: 900;
+    }
+    .screen-header h2 {
+      font-size: 13px;
+      font-weight: 200;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    /* ── Marca / logo ──────────────────────────────────────── */
+    .logo-mark {
+      font-size: clamp(160px, 45vw, 260px);
+      font-weight: 900;
+      line-height: .9;
+      color: var(--black);
+      letter-spacing: -.06em;
+    }
+    .brand {
+      font-size: 14px;
+      font-weight: 200;
+      color: var(--muted);
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+    /* ── Hero ──────────────────────────────────────────────── */
+    .hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 32px;
+      width: 100%;
+    }
+    /* ── Icono de estado (✓ / ✗) ───────────────────────────── */
+    .state-icon {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: var(--black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      color: var(--white);
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .state-icon.error {
+      background: var(--white);
+      border: 2px solid var(--black);
+      color: var(--black);
+    }
+    h1 {
+      font-size: clamp(80px, 22vw, 130px);
+      font-weight: 900;
+      letter-spacing: -.03em;
+      text-align: center;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    h2 {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -.01em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .subtitle {
+      font-size: 20px;
+      font-weight: 200;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: .02em;
+    }
+    /* ── Canal badges (home) ───────────────────────────────── */
+    .channel-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 8px 0;
+      justify-content: center;
+    }
+    /* ── Card de pedido ────────────────────────────────────── */
+    .card {
+      width: 100%;
+      background: var(--surface);
+      border-radius: 4px;
+      padding: 0 20px;
+      margin-bottom: 24px;
+    }
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
     .card-row:last-child { border-bottom: none; }
-    .card-row .label { font-size: 10px; font-weight: 200; color: var(--muted); letter-spacing: .15em; text-transform: uppercase; }
-    .card-row .value { font-size: 14px; font-weight: 700; color: var(--black); max-width: 60%; text-align: right; word-break: break-all; }
-    .tracking-badge { font-size: 12px; font-weight: 700; letter-spacing: .05em; color: var(--black); background: var(--surface); border: 1px solid var(--border); padding: 10px 18px; border-radius: 2px; margin-bottom: 20px; text-align: center; word-break: break-all; width: 100%; }
-    .channel-badge { display: inline-flex; align-items: center; padding: 12px 28px; font-size: 15px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 12px; border-radius: 2px; }
+    .card-row .label {
+      font-size: 10px;
+      font-weight: 200;
+      color: var(--muted);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    .card-row .value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--black);
+      max-width: 60%;
+      text-align: right;
+      word-break: break-all;
+    }
+    /* ── Tracking badge ────────────────────────────────────── */
+    .tracking-badge {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      color: var(--black);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 2px;
+      margin-bottom: 20px;
+      text-align: center;
+      word-break: break-all;
+      width: 100%;
+    }
+    /* ── Canal badges (compartido: home + pantalla pedido) ─── */
+    .channel-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      border-radius: 2px;
+    }
     .channel-temu   { background: var(--black); color: var(--white); }
     .channel-shein  { background: var(--white); color: var(--black); border: 1.5px solid var(--black); }
     .channel-tiktok { background: var(--black); color: var(--white); border: 1.5px dashed var(--white); }
     .channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
     .channel-amazon { background: var(--black); color: var(--white); letter-spacing: .06em; }
-    .status-badge { display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 700; letter-spacing: .05em; border-radius: 2px; }
+    /* ── Estado badge ──────────────────────────────────────── */
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      border-radius: 2px;
+    }
     .status-proceso    { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
-    .status-listo      { background: var(--black); color: var(--white); }
-    .status-devolucion { background: var(--black); color: var(--white); }
-    .mode-toggle { display: flex; width: 100%; border: 1.5px solid var(--black); border-radius: 2px; overflow: hidden; margin-bottom: 16px; }
-    .mode-btn { flex: 1; padding: 14px; border: none; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; background: var(--white); color: var(--muted); transition: background .15s, color .15s; -webkit-tap-highlight-color: transparent; }
+    .status-listo      { background: var(--black);   color: var(--white); }
+    .status-devolucion { background: var(--black);   color: var(--white); }
+    /* ── Toggle Envío / Devolución ─────────────────────────── */
+    .mode-toggle {
+      display: flex;
+      width: 100%;
+      border: 1.5px solid var(--black);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: var(--white);
+      color: var(--muted);
+      transition: background .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
     .mode-btn + .mode-btn { border-left: 1.5px solid var(--black); }
     .mode-btn.active { background: var(--black); color: var(--white); }
-    .mode-indicator { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--surface); border-radius: 2px; margin-bottom: 16px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    /* ── Indicador de modo (pantalla pedido) ───────────────── */
+    .mode-indicator {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: var(--surface);
+      border-radius: 2px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
     .mode-indicator .mode-label-key { color: var(--muted); font-weight: 200; }
     .mode-indicator.devolucion { background: var(--black); color: var(--white); }
     .mode-indicator.devolucion .mode-label-key { color: rgba(255,255,255,.5); }
-    .btn { display: block; width: 100%; padding: 20px; border-radius: 2px; border: none; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; margin-bottom: 12px; transition: opacity .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
+    /* ── Botones ───────────────────────────────────────────── */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 20px;
+      border-radius: 2px;
+      border: none;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: opacity .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
     .btn:active { opacity: .75; transform: scale(.98); }
     .btn-primary   { background: var(--black); color: var(--white); }
     .btn-secondary { background: var(--white); color: var(--muted); border: 1px solid var(--border); }
     .btn-success   { background: var(--black); color: var(--white); }
-    .channel-btn { display: flex; width: 100%; align-items: center; justify-content: center; padding: 18px 20px; border-radius: 2px; border: none; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; transition: opacity .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
+    /* ── Botones de canal (pantalla de selección) ──────────── */
+    .channel-btn {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      padding: 18px 20px;
+      border-radius: 2px;
+      border: none;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: opacity .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
     .channel-btn:active { opacity: .75; transform: scale(.98); }
     .channel-btn.channel-temu   { background: var(--black); color: var(--white); }
     .channel-btn.channel-shein  { background: var(--white); color: var(--black); border: 1.5px solid var(--black); }
     .channel-btn.channel-tiktok { background: var(--black); color: var(--white); outline: 1.5px dashed rgba(255,255,255,.5); outline-offset: -4px; }
     .channel-btn.channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
     .channel-btn.channel-amazon { background: var(--black); color: var(--white); letter-spacing: .08em; }
-    #reader { width: 100%; max-width: 340px; border-radius: 4px; overflow: hidden; margin-bottom: 20px; background: #000; border: 1px solid var(--border); }
+    /* ── Scanner ───────────────────────────────────────────── */
+    #reader {
+      width: 100%;
+      max-width: 340px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      background: #000;
+      border: 1px solid var(--border);
+    }
     #reader video { width: 100% !important; height: auto !important; display: block; }
-    .scan-hint { font-size: 11px; font-weight: 200; color: var(--muted); text-align: center; margin-bottom: 24px; line-height: 1.8; letter-spacing: .08em; text-transform: uppercase; }
-    .spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--black); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 20px; }
+    .scan-hint {
+      font-size: 11px;
+      font-weight: 200;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.8;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    /* ── Spinner ───────────────────────────────────────────── */
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--black);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-bottom: 20px;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #photo-preview { width: 100%; max-width: 340px; border-radius: 4px; object-fit: cover; margin-bottom: 24px; display: block; border: 1px solid var(--border); }
+    /* ── Preview foto ──────────────────────────────────────── */
+    #photo-preview {
+      width: 100%;
+      max-width: 340px;
+      border-radius: 4px;
+      object-fit: cover;
+      margin-bottom: 24px;
+      display: block;
+      border: 1px solid var(--border);
+    }
     .spacer { flex: 1; }
     .divider { width: 40px; height: 2px; background: var(--black); margin: 8px auto 0; }
-    .new-entry-banner { width: 100%; padding: 14px 16px; background: var(--black); color: var(--white); border-radius: 2px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; text-align: center; margin-bottom: 16px; }
+    /* ── Banner nueva devolución ───────────────────────────── */
+    .new-entry-banner {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--black);
+      color: var(--white);
+      border-radius: 2px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 16px;
+    }
   </style>
 </head>
 <body>
 <div id="app">
+
+  <!-- ── HOME ──────────────────────────────────────────────── -->
   <div id="screen-home" class="screen active">
     <div class="hero">
       <div class="logo-mark">%</div>
@@ -98,24 +387,33 @@
       </div>
       <p class="subtitle">Escanea la guía y registra<br>la evidencia en un paso</p>
     </div>
+    <!-- Toggle Envío / Devolución -->
     <div class="mode-toggle">
       <button class="mode-btn active" id="btn-envio" onclick="setMode('envio')">Envío</button>
       <button class="mode-btn" id="btn-devolucion" onclick="setMode('devolucion')">Devolución</button>
     </div>
-    <button class="btn btn-primary" onclick="startFlow()">Escanear guía</button>
+    <button class="btn btn-primary" onclick="startFlow()">
+      Escanear guía
+    </button>
   </div>
+
+  <!-- ── SELECCIÓN DE CANAL (solo en modo Devolución) ─────── -->
   <div id="screen-channel-select" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="showScreen('screen-home')">&#8592;</button>
       <h2>¿Qué canal?</h2>
     </div>
-    <p class="subtitle" style="font-size:14px; margin-bottom:28px; align-self:flex-start">Selecciona el canal<br>de la devolución</p>
+    <p class="subtitle" style="font-size:14px; margin-bottom:28px; align-self:flex-start">
+      Selecciona el canal<br>de la devolución
+    </p>
     <button class="channel-btn channel-temu"   onclick="selectDevChannel('temu')">Temu</button>
     <button class="channel-btn channel-shein"  onclick="selectDevChannel('shein')">SHEIN</button>
     <button class="channel-btn channel-tiktok" onclick="selectDevChannel('tiktok')">TikTok</button>
     <button class="channel-btn channel-ml"     onclick="selectDevChannel('ml')">Mercado Libre</button>
     <button class="channel-btn channel-amazon" onclick="selectDevChannel('amazon')">Amazon</button>
   </div>
+
+  <!-- ── SCANNER ───────────────────────────────────────────── -->
   <div id="screen-scanner" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="cancelScanner()">&#8592;</button>
@@ -126,10 +424,14 @@
     <div class="spacer"></div>
     <button class="btn btn-secondary" onclick="cancelScanner()">Cancelar</button>
   </div>
+
+  <!-- ── LOADING ───────────────────────────────────────────── -->
   <div id="screen-loading" class="screen">
     <div class="spinner"></div>
     <p class="subtitle">Buscando en el Sheet...</p>
   </div>
+
+  <!-- ── FOUND ─────────────────────────────────────────────── -->
   <div id="screen-found" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="goHome()">&#8592;</button>
@@ -137,21 +439,42 @@
     </div>
     <div id="info-channel-badge" class="channel-badge" style="margin-bottom:8px"></div>
     <div class="tracking-badge" id="info-tracking"></div>
-    <div class="new-entry-banner" id="new-entry-banner" style="display:none">✦ Nueva devolución — se creará registro</div>
+    <!-- Banner de nueva devolución (visible solo cuando row=0) -->
+    <div class="new-entry-banner" id="new-entry-banner" style="display:none">
+      ✦ Nueva devolución — se creará registro
+    </div>
+    <!-- Indicador del modo activo -->
     <div class="mode-indicator" id="found-mode-indicator">
       <span class="mode-label-key">Modo</span>
       <span id="found-mode-label">Envío</span>
     </div>
     <div class="card" id="found-card">
-      <div class="card-row"><span class="label">SKU</span><span class="value" id="info-sku">—</span></div>
-      <div class="card-row"><span class="label">Cantidad</span><span class="value" id="info-qty">—</span></div>
-      <div class="card-row"><span class="label">N° Pedido</span><span class="value" id="info-pedido">—</span></div>
-      <div class="card-row"><span class="label">Estado</span><span class="value"><span class="status-badge" id="info-status">—</span></span></div>
+      <div class="card-row">
+        <span class="label">SKU</span>
+        <span class="value" id="info-sku">—</span>
+      </div>
+      <div class="card-row">
+        <span class="label">Cantidad</span>
+        <span class="value" id="info-qty">—</span>
+      </div>
+      <div class="card-row">
+        <span class="label">N° Pedido</span>
+        <span class="value" id="info-pedido">—</span>
+      </div>
+      <div class="card-row">
+        <span class="label">Estado</span>
+        <span class="value"><span class="status-badge" id="info-status">—</span></span>
+      </div>
     </div>
-    <button class="btn btn-primary" id="photo-btn" onclick="triggerPhoto()">📸&nbsp; Tomar foto de evidencia</button>
+    <button class="btn btn-primary" id="photo-btn" onclick="triggerPhoto()">
+      📸&nbsp; Tomar foto de evidencia
+    </button>
     <button class="btn btn-secondary" onclick="goHome()">Cancelar</button>
-    <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+    <input type="file" id="photo-input" accept="image/*" capture="environment"
+           style="display:none" onchange="handlePhoto(this)">
   </div>
+
+  <!-- ── NOT FOUND (solo envíos — en devolución va a found) ── -->
   <div id="screen-not-found" class="screen">
     <div class="hero">
       <div class="state-icon error">✗</div>
@@ -162,29 +485,45 @@
     <button class="btn btn-primary" onclick="startFlow()">Intentar de nuevo</button>
     <button class="btn btn-secondary" onclick="goHome()">Cancelar</button>
   </div>
+
+  <!-- ── PREVIEW ───────────────────────────────────────────── -->
   <div id="screen-preview" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="showScreen('screen-found')">&#8592;</button>
       <h2>Confirmar foto</h2>
     </div>
     <img id="photo-preview" alt="Evidencia">
-    <button class="btn btn-success" onclick="submitPhoto()">Enviar evidencia</button>
-    <button class="btn btn-secondary" onclick="triggerPhoto()">Tomar otra foto</button>
+    <button class="btn btn-success" onclick="submitPhoto()">
+      Enviar evidencia
+    </button>
+    <button class="btn btn-secondary" onclick="triggerPhoto()">
+      Tomar otra foto
+    </button>
   </div>
+
+  <!-- ── UPLOADING ─────────────────────────────────────────── -->
   <div id="screen-uploading" class="screen">
     <div class="spinner"></div>
     <p class="subtitle">Subiendo evidencia a Drive...</p>
   </div>
+
+  <!-- ── SUCCESS ───────────────────────────────────────────── -->
   <div id="screen-success" class="screen">
     <div class="hero">
       <div class="state-icon">✓</div>
       <h2>Listo</h2>
       <div class="divider"></div>
       <div class="tracking-badge" id="success-tracking" style="margin-bottom:0"></div>
-      <p class="subtitle" id="success-subtitle">Estado → Listo en el Sheet ✓<br>Foto guardada en Drive ✓</p>
+      <p class="subtitle" id="success-subtitle">
+        Estado → Listo en el Sheet ✓<br>
+        Foto guardada en Drive ✓
+      </p>
     </div>
-    <button class="btn btn-primary" onclick="goHome()">Escanear otra guía</button>
+    <button class="btn btn-primary" onclick="goHome()">
+      Escanear otra guía
+    </button>
   </div>
+
 </div>
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyt2_OBXDiGStpeyTAkQGBAG_wWGI_GP24swuGLcAI1S9LnCWwEmhPHQul2CGsDw/exec';
@@ -199,17 +538,19 @@ const CHANNEL_LABELS = {
 let scanner         = null;
 let scanning        = false;
 let currentTracking = null;
-let currentChannel  = null;
-let currentRow      = null;
+let currentChannel  = null;   // canal activo (auto-detect en envío, manual en devolución)
+let currentRow      = null;   // fila en el Sheet (0 = nueva entrada en devolución)
 let currentPhoto    = null;
-let currentMode     = 'envio';
+let currentMode     = 'envio';   // 'envio' | 'devolucion'
 
+/* ── Modo ──────────────────────────────────────────────────── */
 function setMode(mode) {
   currentMode = mode;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + mode).classList.add('active');
 }
 
+/* ── Navegación ────────────────────────────────────────────── */
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -226,6 +567,9 @@ function goHome() {
   showScreen('screen-home');
 }
 
+/* ── Inicio de flujo ───────────────────────────────────────── */
+// En modo devolución: primero seleccionar canal, luego escanear.
+// En modo envío: ir directo al scanner.
 function startFlow() {
   if (currentMode === 'devolucion') {
     currentChannel = null;
@@ -235,20 +579,26 @@ function startFlow() {
   }
 }
 
+/* ── Selección de canal (devolución) ──────────────────────── */
 function selectDevChannel(channel) {
   currentChannel = channel;
   startScanner();
 }
 
+/* ── Scanner ───────────────────────────────────────────────── */
 async function startScanner() {
+  // Actualizar texto del scanner según modo
   if (currentMode === 'devolucion') {
     const labels = CHANNEL_LABELS[currentChannel] || ['—', ''];
     document.getElementById('scanner-title').textContent = 'Escanear · ' + labels[0];
-    document.getElementById('scan-hint-text').textContent = 'Escanea el código\nde la devolución';
+    document.getElementById('scan-hint-text').textContent =
+      'Escanea el código\nde la devolución';
   } else {
     document.getElementById('scanner-title').textContent = 'Escanear código';
-    document.getElementById('scan-hint-text').textContent = 'Apunta a cualquier código\nde la etiqueta';
+    document.getElementById('scan-hint-text').textContent =
+      'Apunta a cualquier código\nde la etiqueta';
   }
+
   showScreen('screen-scanner');
   scanning = false;
   try {
@@ -272,6 +622,7 @@ async function stopScanner() {
 
 function cancelScanner() {
   stopScanner();
+  // En devolución, volver a la selección de canal; en envío, a home
   if (currentMode === 'devolucion') {
     showScreen('screen-channel-select');
   } else {
@@ -279,34 +630,47 @@ function cancelScanner() {
   }
 }
 
+/* ── Escaneo exitoso ───────────────────────────────────────── */
 async function onScanSuccess(tracking) {
   if (scanning) return;
   scanning = true;
   await stopScanner();
   currentTracking = tracking;
   showScreen('screen-loading');
+
   try {
+    // Construir URL según modo
     let url = APPS_SCRIPT_URL + '?tracking=' + encodeURIComponent(tracking);
     if (currentMode === 'devolucion') {
       url += '&mode=devolucion&channel=' + encodeURIComponent(currentChannel);
     }
+
     const res  = await fetch(url, { redirect: 'follow' });
     const data = await res.json();
+
     if (data.error) {
       alert('Error del servidor:\n' + data.error);
       scanning = false;
       showScreen(currentMode === 'devolucion' ? 'screen-channel-select' : 'screen-home');
       return;
     }
+
     if (data.found || currentMode === 'devolucion') {
+      // ── Pantalla FOUND (también para nuevas entradas en devolución) ──
       currentRow     = data.found ? data.row : 0;
+      if (!data.found) currentChannel = currentChannel; // ya está seteado
+
+      // Canal badge
       const chKey    = data.channel || currentChannel;
-      currentChannel = chKey;
+      currentChannel = chKey;   // ← fix: guardar canal detectado para el POST
       const chBadge  = document.getElementById('info-channel-badge');
       const [text, cls] = CHANNEL_LABELS[chKey] || ['—', ''];
       chBadge.textContent = text;
       chBadge.className   = 'channel-badge ' + cls;
+
       document.getElementById('info-tracking').textContent = tracking;
+
+      // Banner de nueva entrada
       const newBanner = document.getElementById('new-entry-banner');
       if (!data.found && currentMode === 'devolucion') {
         newBanner.style.display = 'block';
@@ -324,6 +688,7 @@ async function onScanSuccess(tracking) {
         document.getElementById('info-sku').textContent     = data.sku    || '—';
         document.getElementById('info-qty').textContent     = (data.qty != null ? data.qty + ' pz' : '—');
         document.getElementById('info-pedido').textContent  = data.pedido || '—';
+
         const statusEl = document.getElementById('info-status');
         statusEl.textContent = data.status || '—';
         statusEl.className   = 'status-badge ' + (
@@ -332,6 +697,8 @@ async function onScanSuccess(tracking) {
           'status-proceso'
         );
       }
+
+      // Indicador de modo
       const modeIndicator = document.getElementById('found-mode-indicator');
       const modeLabel     = document.getElementById('found-mode-label');
       if (currentMode === 'devolucion') {
@@ -341,13 +708,21 @@ async function onScanSuccess(tracking) {
         modeLabel.textContent = 'Envío';
         modeIndicator.classList.remove('devolucion');
       }
+
+      // Texto del botón de foto
       document.getElementById('photo-btn').textContent =
-        currentMode === 'devolucion' ? '📸  Tomar foto de devolución' : '📸  Tomar foto de evidencia';
+        currentMode === 'devolucion'
+          ? '📸  Tomar foto de devolución'
+          : '📸  Tomar foto de evidencia';
+
       showScreen('screen-found');
+
     } else {
+      // No encontrado en modo ENVÍO → pantalla de error
       document.getElementById('not-found-tracking').textContent = tracking;
       showScreen('screen-not-found');
     }
+
   } catch (err) {
     alert('Error de conexión:\n' + err.message);
     scanning = false;
@@ -355,6 +730,7 @@ async function onScanSuccess(tracking) {
   }
 }
 
+/* ── Foto ──────────────────────────────────────────────────── */
 function triggerPhoto() {
   const input = document.getElementById('photo-input');
   input.value = '';
@@ -390,13 +766,14 @@ function compressImage(file) {
   });
 }
 
+/* ── Subir evidencia ───────────────────────────────────────── */
 async function submitPhoto() {
   if (!currentPhoto) { alert('Primero toma una foto.'); return; }
   showScreen('screen-uploading');
   const payload = JSON.stringify({
     tracking: currentTracking,
     channel:  currentChannel,
-    row:      currentRow,
+    row:      currentRow,   // 0 = nueva entrada en devolución
     photo:    currentPhoto,
     mode:     currentMode
   });

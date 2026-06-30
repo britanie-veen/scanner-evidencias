@@ -17,342 +17,72 @@
       --border:  #E8E8E8;
       --muted:   #999999;
     }
-    body {
-      font-family: 'Montserrat', -apple-system, sans-serif;
-      background: var(--white);
-      color: var(--black);
-      min-height: 100dvh;
-    }
-    #app {
-      width: 100%;
-      max-width: 430px;
-      margin: 0 auto;
-    }
-    .screen {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 24px 52px;
-      min-height: 100dvh;
-    }
+    body { font-family: 'Montserrat', -apple-system, sans-serif; background: var(--white); color: var(--black); min-height: 100dvh; }
+    #app { width: 100%; max-width: 430px; margin: 0 auto; }
+    .screen { display: none; flex-direction: column; align-items: center; padding: 40px 24px 52px; min-height: 100dvh; }
     .screen.active { display: flex; }
-    #screen-loading,
-    #screen-uploading { justify-content: center; }
-    .screen-header {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 32px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 20px;
-    }
-    .back-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: var(--black);
-      padding: 4px 8px 4px 0;
-      line-height: 1;
-      font-weight: 900;
-    }
-    .screen-header h2 {
-      font-size: 13px;
-      font-weight: 200;
-      letter-spacing: .15em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .logo-mark {
-      font-size: clamp(160px, 45vw, 260px);
-      font-weight: 900;
-      line-height: .9;
-      color: var(--black);
-      letter-spacing: -.06em;
-    }
-    .brand {
-      font-size: 14px;
-      font-weight: 200;
-      color: var(--muted);
-      letter-spacing: .25em;
-      text-transform: uppercase;
-      margin-top: 8px;
-    }
-    .hero {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-      margin-bottom: 32px;
-      width: 100%;
-    }
-    .state-icon {
-      width: 88px;
-      height: 88px;
-      border-radius: 50%;
-      background: var(--black);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 38px;
-      color: var(--white);
-      font-weight: 900;
-      margin-bottom: 8px;
-    }
-    .state-icon.error {
-      background: var(--white);
-      border: 2px solid var(--black);
-      color: var(--black);
-    }
-    h1 {
-      font-size: clamp(80px, 22vw, 130px);
-      font-weight: 900;
-      letter-spacing: -.03em;
-      text-align: center;
-      line-height: 1;
-      text-transform: uppercase;
-    }
-    h2 {
-      font-size: 24px;
-      font-weight: 900;
-      letter-spacing: -.01em;
-      text-align: center;
-      text-transform: uppercase;
-    }
-    .subtitle {
-      font-size: 20px;
-      font-weight: 200;
-      color: var(--muted);
-      text-align: center;
-      line-height: 1.7;
-      letter-spacing: .02em;
-    }
-    .channel-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin: 8px 0;
-      justify-content: center;
-    }
-    .card {
-      width: 100%;
-      background: var(--surface);
-      border-radius: 4px;
-      padding: 0 20px;
-      margin-bottom: 24px;
-    }
-    .card-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-    }
+    #screen-loading, #screen-uploading { justify-content: center; }
+    .screen-header { width: 100%; display: flex; align-items: center; gap: 16px; margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+    .back-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--black); padding: 4px 8px 4px 0; line-height: 1; font-weight: 900; }
+    .screen-header h2 { font-size: 13px; font-weight: 200; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+    .logo-mark { font-size: clamp(160px, 45vw, 260px); font-weight: 900; line-height: .9; color: var(--black); letter-spacing: -.06em; }
+    .brand { font-size: 14px; font-weight: 200; color: var(--muted); letter-spacing: .25em; text-transform: uppercase; margin-top: 8px; }
+    .hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; margin-bottom: 32px; width: 100%; }
+    .state-icon { width: 88px; height: 88px; border-radius: 50%; background: var(--black); display: flex; align-items: center; justify-content: center; font-size: 38px; color: var(--white); font-weight: 900; margin-bottom: 8px; }
+    .state-icon.error { background: var(--white); border: 2px solid var(--black); color: var(--black); }
+    h1 { font-size: clamp(80px, 22vw, 130px); font-weight: 900; letter-spacing: -.03em; text-align: center; line-height: 1; text-transform: uppercase; }
+    h2 { font-size: 24px; font-weight: 900; letter-spacing: -.01em; text-align: center; text-transform: uppercase; }
+    .subtitle { font-size: 20px; font-weight: 200; color: var(--muted); text-align: center; line-height: 1.7; letter-spacing: .02em; }
+    .channel-pills { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; justify-content: center; }
+    .card { width: 100%; background: var(--surface); border-radius: 4px; padding: 0 20px; margin-bottom: 24px; }
+    .card-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); }
     .card-row:last-child { border-bottom: none; }
-    .card-row .label {
-      font-size: 10px;
-      font-weight: 200;
-      color: var(--muted);
-      letter-spacing: .15em;
-      text-transform: uppercase;
-    }
-    .card-row .value {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--black);
-      max-width: 60%;
-      text-align: right;
-      word-break: break-all;
-    }
-    .tracking-badge {
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .05em;
-      color: var(--black);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 10px 18px;
-      border-radius: 2px;
-      margin-bottom: 20px;
-      text-align: center;
-      word-break: break-all;
-      width: 100%;
-    }
-    .channel-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 12px 28px;
-      font-size: 15px;
-      font-weight: 900;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      border-radius: 2px;
-    }
+    .card-row .label { font-size: 10px; font-weight: 200; color: var(--muted); letter-spacing: .15em; text-transform: uppercase; }
+    .card-row .value { font-size: 14px; font-weight: 700; color: var(--black); max-width: 60%; text-align: right; word-break: break-all; }
+    .tracking-badge { font-size: 12px; font-weight: 700; letter-spacing: .05em; color: var(--black); background: var(--surface); border: 1px solid var(--border); padding: 10px 18px; border-radius: 2px; margin-bottom: 20px; text-align: center; word-break: break-all; width: 100%; }
+    .channel-badge { display: inline-flex; align-items: center; padding: 12px 28px; font-size: 15px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 12px; border-radius: 2px; }
     .channel-temu   { background: var(--black); color: var(--white); }
     .channel-shein  { background: var(--white); color: var(--black); border: 1.5px solid var(--black); }
     .channel-tiktok { background: var(--black); color: var(--white); border: 1.5px dashed var(--white); }
     .channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
     .channel-amazon { background: var(--black); color: var(--white); letter-spacing: .06em; }
-    .status-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .05em;
-      border-radius: 2px;
-    }
+    .status-badge { display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 700; letter-spacing: .05em; border-radius: 2px; }
     .status-proceso    { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
-    .status-listo      { background: var(--black);   color: var(--white); }
-    .status-devolucion { background: var(--black);   color: var(--white); }
-    .mode-toggle {
-      display: flex;
-      width: 100%;
-      border: 1.5px solid var(--black);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-bottom: 16px;
-    }
-    .mode-btn {
-      flex: 1;
-      padding: 14px;
-      border: none;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      cursor: pointer;
-      background: var(--white);
-      color: var(--muted);
-      transition: background .15s, color .15s;
-      -webkit-tap-highlight-color: transparent;
-    }
+    .status-listo      { background: var(--black); color: var(--white); }
+    .status-devolucion { background: var(--black); color: var(--white); }
+    .mode-toggle { display: flex; width: 100%; border: 1.5px solid var(--black); border-radius: 2px; overflow: hidden; margin-bottom: 16px; }
+    .mode-btn { flex: 1; padding: 14px; border: none; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; background: var(--white); color: var(--muted); transition: background .15s, color .15s; -webkit-tap-highlight-color: transparent; }
     .mode-btn + .mode-btn { border-left: 1.5px solid var(--black); }
     .mode-btn.active { background: var(--black); color: var(--white); }
-    .mode-indicator {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 16px;
-      background: var(--surface);
-      border-radius: 2px;
-      margin-bottom: 16px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-    }
+    .mode-indicator { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--surface); border-radius: 2px; margin-bottom: 16px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
     .mode-indicator .mode-label-key { color: var(--muted); font-weight: 200; }
     .mode-indicator.devolucion { background: var(--black); color: var(--white); }
     .mode-indicator.devolucion .mode-label-key { color: rgba(255,255,255,.5); }
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 20px;
-      border-radius: 2px;
-      border: none;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      cursor: pointer;
-      margin-bottom: 12px;
-      transition: opacity .15s, transform .1s;
-      -webkit-tap-highlight-color: transparent;
-    }
+    .btn { display: block; width: 100%; padding: 20px; border-radius: 2px; border: none; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; margin-bottom: 12px; transition: opacity .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
     .btn:active { opacity: .75; transform: scale(.98); }
     .btn-primary   { background: var(--black); color: var(--white); }
     .btn-secondary { background: var(--white); color: var(--muted); border: 1px solid var(--border); }
     .btn-success   { background: var(--black); color: var(--white); }
-    .channel-btn {
-      display: flex;
-      width: 100%;
-      align-items: center;
-      justify-content: center;
-      padding: 18px 20px;
-      border-radius: 2px;
-      border: none;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 14px;
-      font-weight: 900;
-      letter-spacing: .15em;
-      text-transform: uppercase;
-      cursor: pointer;
-      margin-bottom: 10px;
-      transition: opacity .15s, transform .1s;
-      -webkit-tap-highlight-color: transparent;
-    }
+    .channel-btn { display: flex; width: 100%; align-items: center; justify-content: center; padding: 18px 20px; border-radius: 2px; border: none; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; transition: opacity .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
     .channel-btn:active { opacity: .75; transform: scale(.98); }
     .channel-btn.channel-temu   { background: var(--black); color: var(--white); }
     .channel-btn.channel-shein  { background: var(--white); color: var(--black); border: 1.5px solid var(--black); }
     .channel-btn.channel-tiktok { background: var(--black); color: var(--white); outline: 1.5px dashed rgba(255,255,255,.5); outline-offset: -4px; }
     .channel-btn.channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
     .channel-btn.channel-amazon { background: var(--black); color: var(--white); letter-spacing: .08em; }
-    #reader {
-      width: 100%;
-      max-width: 340px;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 20px;
-      background: #000;
-      border: 1px solid var(--border);
-    }
+    #reader { width: 100%; max-width: 340px; border-radius: 4px; overflow: hidden; margin-bottom: 20px; background: #000; border: 1px solid var(--border); }
     #reader video { width: 100% !important; height: auto !important; display: block; }
-    .scan-hint {
-      font-size: 11px;
-      font-weight: 200;
-      color: var(--muted);
-      text-align: center;
-      margin-bottom: 24px;
-      line-height: 1.8;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 3px solid var(--border);
-      border-top-color: var(--black);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      margin-bottom: 20px;
-    }
+    .scan-hint { font-size: 11px; font-weight: 200; color: var(--muted); text-align: center; margin-bottom: 24px; line-height: 1.8; letter-spacing: .08em; text-transform: uppercase; }
+    .spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--black); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 20px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #photo-preview {
-      width: 100%;
-      max-width: 340px;
-      border-radius: 4px;
-      object-fit: cover;
-      margin-bottom: 24px;
-      display: block;
-      border: 1px solid var(--border);
-    }
+    #photo-preview { width: 100%; max-width: 340px; border-radius: 4px; object-fit: cover; margin-bottom: 24px; display: block; border: 1px solid var(--border); }
     .spacer { flex: 1; }
     .divider { width: 40px; height: 2px; background: var(--black); margin: 8px auto 0; }
-    .new-entry-banner {
-      width: 100%;
-      padding: 14px 16px;
-      background: var(--black);
-      color: var(--white);
-      border-radius: 2px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      text-align: center;
-      margin-bottom: 16px;
-    }
+    .new-entry-banner { width: 100%; padding: 14px 16px; background: var(--black); color: var(--white); border-radius: 2px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; text-align: center; margin-bottom: 16px; }
   </style>
 </head>
 <body>
 <div id="app">
-
   <div id="screen-home" class="screen active">
     <div class="hero">
       <div class="logo-mark">%</div>
@@ -374,22 +104,18 @@
     </div>
     <button class="btn btn-primary" onclick="startFlow()">Escanear guía</button>
   </div>
-
   <div id="screen-channel-select" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="showScreen('screen-home')">&#8592;</button>
       <h2>¿Qué canal?</h2>
     </div>
-    <p class="subtitle" style="font-size:14px; margin-bottom:28px; align-self:flex-start">
-      Selecciona el canal<br>de la devolución
-    </p>
+    <p class="subtitle" style="font-size:14px; margin-bottom:28px; align-self:flex-start">Selecciona el canal<br>de la devolución</p>
     <button class="channel-btn channel-temu"   onclick="selectDevChannel('temu')">Temu</button>
     <button class="channel-btn channel-shein"  onclick="selectDevChannel('shein')">SHEIN</button>
     <button class="channel-btn channel-tiktok" onclick="selectDevChannel('tiktok')">TikTok</button>
     <button class="channel-btn channel-ml"     onclick="selectDevChannel('ml')">Mercado Libre</button>
     <button class="channel-btn channel-amazon" onclick="selectDevChannel('amazon')">Amazon</button>
   </div>
-
   <div id="screen-scanner" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="cancelScanner()">&#8592;</button>
@@ -400,12 +126,10 @@
     <div class="spacer"></div>
     <button class="btn btn-secondary" onclick="cancelScanner()">Cancelar</button>
   </div>
-
   <div id="screen-loading" class="screen">
     <div class="spinner"></div>
     <p class="subtitle">Buscando en el Sheet...</p>
   </div>
-
   <div id="screen-found" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="goHome()">&#8592;</button>
@@ -413,39 +137,21 @@
     </div>
     <div id="info-channel-badge" class="channel-badge" style="margin-bottom:8px"></div>
     <div class="tracking-badge" id="info-tracking"></div>
-    <div class="new-entry-banner" id="new-entry-banner" style="display:none">
-      ✦ Nueva devolución — se creará registro
-    </div>
+    <div class="new-entry-banner" id="new-entry-banner" style="display:none">✦ Nueva devolución — se creará registro</div>
     <div class="mode-indicator" id="found-mode-indicator">
       <span class="mode-label-key">Modo</span>
       <span id="found-mode-label">Envío</span>
     </div>
     <div class="card" id="found-card">
-      <div class="card-row">
-        <span class="label">SKU</span>
-        <span class="value" id="info-sku">—</span>
-      </div>
-      <div class="card-row">
-        <span class="label">Cantidad</span>
-        <span class="value" id="info-qty">—</span>
-      </div>
-      <div class="card-row">
-        <span class="label">N° Pedido</span>
-        <span class="value" id="info-pedido">—</span>
-      </div>
-      <div class="card-row">
-        <span class="label">Estado</span>
-        <span class="value"><span class="status-badge" id="info-status">—</span></span>
-      </div>
+      <div class="card-row"><span class="label">SKU</span><span class="value" id="info-sku">—</span></div>
+      <div class="card-row"><span class="label">Cantidad</span><span class="value" id="info-qty">—</span></div>
+      <div class="card-row"><span class="label">N° Pedido</span><span class="value" id="info-pedido">—</span></div>
+      <div class="card-row"><span class="label">Estado</span><span class="value"><span class="status-badge" id="info-status">—</span></span></div>
     </div>
-    <button class="btn btn-primary" id="photo-btn" onclick="triggerPhoto()">
-      📸&nbsp; Tomar foto de evidencia
-    </button>
+    <button class="btn btn-primary" id="photo-btn" onclick="triggerPhoto()">📸&nbsp; Tomar foto de evidencia</button>
     <button class="btn btn-secondary" onclick="goHome()">Cancelar</button>
-    <input type="file" id="photo-input" accept="image/*" capture="environment"
-           style="display:none" onchange="handlePhoto(this)">
+    <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
   </div>
-
   <div id="screen-not-found" class="screen">
     <div class="hero">
       <div class="state-icon error">✗</div>
@@ -456,7 +162,6 @@
     <button class="btn btn-primary" onclick="startFlow()">Intentar de nuevo</button>
     <button class="btn btn-secondary" onclick="goHome()">Cancelar</button>
   </div>
-
   <div id="screen-preview" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="showScreen('screen-found')">&#8592;</button>
@@ -466,26 +171,255 @@
     <button class="btn btn-success" onclick="submitPhoto()">Enviar evidencia</button>
     <button class="btn btn-secondary" onclick="triggerPhoto()">Tomar otra foto</button>
   </div>
-
   <div id="screen-uploading" class="screen">
     <div class="spinner"></div>
     <p class="subtitle">Subiendo evidencia a Drive...</p>
   </div>
-
   <div id="screen-success" class="screen">
     <div class="hero">
       <div class="state-icon">✓</div>
       <h2>Listo</h2>
       <div class="divider"></div>
       <div class="tracking-badge" id="success-tracking" style="margin-bottom:0"></div>
-      <p class="subtitle" id="success-subtitle">
-        Estado → Listo en el Sheet ✓<br>
-        Foto guardada en Drive ✓
-      </p>
+      <p class="subtitle" id="success-subtitle">Estado → Listo en el Sheet ✓<br>Foto guardada en Drive ✓</p>
     </div>
     <button class="btn btn-primary" onclick="goHome()">Escanear otra guía</button>
   </div>
-
 </div>
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyt2_OBX
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyt2_OBXDiGStpeyTAkQGBAG_wWGI_GP24swuGLcAI1S9LnCWwEmhPHQul2CGsDw/exec';
+const CHANNEL_LABELS = {
+  temu:   ['TEMU',   'channel-temu'],
+  shein:  ['SHEIN',  'channel-shein'],
+  tiktok: ['TIKTOK', 'channel-tiktok'],
+  ml:     ['ML',     'channel-ml'],
+  amazon: ['AMAZON', 'channel-amazon']
+};
+
+let scanner         = null;
+let scanning        = false;
+let currentTracking = null;
+let currentChannel  = null;
+let currentRow      = null;
+let currentPhoto    = null;
+let currentMode     = 'envio';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + mode).classList.add('active');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goHome() {
+  stopScanner();
+  scanning        = false;
+  currentTracking = null;
+  currentChannel  = null;
+  currentRow      = null;
+  currentPhoto    = null;
+  showScreen('screen-home');
+}
+
+function startFlow() {
+  if (currentMode === 'devolucion') {
+    currentChannel = null;
+    showScreen('screen-channel-select');
+  } else {
+    startScanner();
+  }
+}
+
+function selectDevChannel(channel) {
+  currentChannel = channel;
+  startScanner();
+}
+
+async function startScanner() {
+  if (currentMode === 'devolucion') {
+    const labels = CHANNEL_LABELS[currentChannel] || ['—', ''];
+    document.getElementById('scanner-title').textContent = 'Escanear · ' + labels[0];
+    document.getElementById('scan-hint-text').textContent = 'Escanea el código\nde la devolución';
+  } else {
+    document.getElementById('scanner-title').textContent = 'Escanear código';
+    document.getElementById('scan-hint-text').textContent = 'Apunta a cualquier código\nde la etiqueta';
+  }
+  showScreen('screen-scanner');
+  scanning = false;
+  try {
+    if (!scanner) scanner = new Html5Qrcode('reader');
+    if (scanner.isScanning) await scanner.stop();
+    await scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 240, height: 240 }, formatsToSupport: [0, 5, 6, 3, 9] },
+      onScanSuccess,
+      () => {}
+    );
+  } catch (err) {
+    alert('No se pudo acceder a la cámara.\n' + err.message);
+    showScreen('screen-home');
+  }
+}
+
+async function stopScanner() {
+  try { if (scanner && scanner.isScanning) await scanner.stop(); } catch (_) {}
+}
+
+function cancelScanner() {
+  stopScanner();
+  if (currentMode === 'devolucion') {
+    showScreen('screen-channel-select');
+  } else {
+    showScreen('screen-home');
+  }
+}
+
+async function onScanSuccess(tracking) {
+  if (scanning) return;
+  scanning = true;
+  await stopScanner();
+  currentTracking = tracking;
+  showScreen('screen-loading');
+  try {
+    let url = APPS_SCRIPT_URL + '?tracking=' + encodeURIComponent(tracking);
+    if (currentMode === 'devolucion') {
+      url += '&mode=devolucion&channel=' + encodeURIComponent(currentChannel);
+    }
+    const res  = await fetch(url, { redirect: 'follow' });
+    const data = await res.json();
+    if (data.error) {
+      alert('Error del servidor:\n' + data.error);
+      scanning = false;
+      showScreen(currentMode === 'devolucion' ? 'screen-channel-select' : 'screen-home');
+      return;
+    }
+    if (data.found || currentMode === 'devolucion') {
+      currentRow     = data.found ? data.row : 0;
+      const chKey    = data.channel || currentChannel;
+      currentChannel = chKey;
+      const chBadge  = document.getElementById('info-channel-badge');
+      const [text, cls] = CHANNEL_LABELS[chKey] || ['—', ''];
+      chBadge.textContent = text;
+      chBadge.className   = 'channel-badge ' + cls;
+      document.getElementById('info-tracking').textContent = tracking;
+      const newBanner = document.getElementById('new-entry-banner');
+      if (!data.found && currentMode === 'devolucion') {
+        newBanner.style.display = 'block';
+        document.getElementById('found-card').style.opacity = '0.4';
+        document.getElementById('found-title').textContent  = 'Nueva devolución';
+        document.getElementById('info-sku').textContent     = '—';
+        document.getElementById('info-qty').textContent     = '—';
+        document.getElementById('info-pedido').textContent  = '—';
+        document.getElementById('info-status').textContent  = 'Pendiente';
+        document.getElementById('info-status').className    = 'status-badge status-proceso';
+      } else {
+        newBanner.style.display = 'none';
+        document.getElementById('found-card').style.opacity = '1';
+        document.getElementById('found-title').textContent  = 'Pedido encontrado';
+        document.getElementById('info-sku').textContent     = data.sku    || '—';
+        document.getElementById('info-qty').textContent     = (data.qty != null ? data.qty + ' pz' : '—');
+        document.getElementById('info-pedido').textContent  = data.pedido || '—';
+        const statusEl = document.getElementById('info-status');
+        statusEl.textContent = data.status || '—';
+        statusEl.className   = 'status-badge ' + (
+          data.status === 'Listo'      ? 'status-listo'      :
+          data.status === 'Devolución' ? 'status-devolucion' :
+          'status-proceso'
+        );
+      }
+      const modeIndicator = document.getElementById('found-mode-indicator');
+      const modeLabel     = document.getElementById('found-mode-label');
+      if (currentMode === 'devolucion') {
+        modeLabel.textContent = 'Devolución · ' + text;
+        modeIndicator.classList.add('devolucion');
+      } else {
+        modeLabel.textContent = 'Envío';
+        modeIndicator.classList.remove('devolucion');
+      }
+      document.getElementById('photo-btn').textContent =
+        currentMode === 'devolucion' ? '📸  Tomar foto de devolución' : '📸  Tomar foto de evidencia';
+      showScreen('screen-found');
+    } else {
+      document.getElementById('not-found-tracking').textContent = tracking;
+      showScreen('screen-not-found');
+    }
+  } catch (err) {
+    alert('Error de conexión:\n' + err.message);
+    scanning = false;
+    showScreen('screen-home');
+  }
+}
+
+function triggerPhoto() {
+  const input = document.getElementById('photo-input');
+  input.value = '';
+  input.click();
+}
+
+async function handlePhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  document.getElementById('photo-preview').src = URL.createObjectURL(file);
+  currentPhoto = await compressImage(file);
+  showScreen('screen-preview');
+}
+
+function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.75).split(',')[1]);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function submitPhoto() {
+  if (!currentPhoto) { alert('Primero toma una foto.'); return; }
+  showScreen('screen-uploading');
+  const payload = JSON.stringify({
+    tracking: currentTracking,
+    channel:  currentChannel,
+    row:      currentRow,
+    photo:    currentPhoto,
+    mode:     currentMode
+  });
+  try {
+    const res  = await fetch(APPS_SCRIPT_URL, { method: 'POST', redirect: 'follow', body: payload });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('success-tracking').textContent = currentTracking;
+      document.getElementById('success-subtitle').innerHTML =
+        currentMode === 'devolucion'
+          ? (currentRow === 0
+              ? 'Devolución registrada en el Sheet ✓<br>Foto guardada en Drive ✓'
+              : 'Estado → Revisada en el Sheet ✓<br>Foto guardada en Drive ✓')
+          : 'Estado → Listo en el Sheet ✓<br>Foto guardada en Drive ✓';
+      showScreen('screen-success');
+    } else {
+      throw new Error(data.error || 'Error en el servidor');
+    }
+  } catch (err) {
+    alert('Error al subir la evidencia:\n' + err.message + '\n\nIntenta de nuevo.');
+    showScreen('screen-preview');
+  }
+}
+</script>
+</body>
+</html>

@@ -397,20 +397,20 @@
     </button>
   </div>
 
-  <!-- ── SELECCIÓN DE CANAL (solo en modo Devolución) ─────── -->
+  <!-- ── SELECCIÓN DE CANAL (envío y devolución) ─────────── -->
   <div id="screen-channel-select" class="screen">
     <div class="screen-header">
       <button class="back-btn" onclick="showScreen('screen-home')">&#8592;</button>
       <h2>¿Qué canal?</h2>
     </div>
-    <p class="subtitle" style="font-size:14px; margin-bottom:28px; align-self:flex-start">
-      Selecciona el canal<br>de la devolución
+    <p class="subtitle" id="channel-select-subtitle" style="font-size:14px; margin-bottom:28px; align-self:flex-start">
+      Selecciona el canal
     </p>
-    <button class="channel-btn channel-temu"   onclick="selectDevChannel('temu')">Temu</button>
-    <button class="channel-btn channel-shein"  onclick="selectDevChannel('shein')">SHEIN</button>
-    <button class="channel-btn channel-tiktok" onclick="selectDevChannel('tiktok')">TikTok</button>
-    <button class="channel-btn channel-ml"     onclick="selectDevChannel('ml')">Mercado Libre</button>
-    <button class="channel-btn channel-amazon" onclick="selectDevChannel('amazon')">Amazon</button>
+    <button class="channel-btn channel-temu"   onclick="selectChannel('temu')">Temu</button>
+    <button class="channel-btn channel-shein"  onclick="selectChannel('shein')">SHEIN</button>
+    <button class="channel-btn channel-tiktok" onclick="selectChannel('tiktok')">TikTok</button>
+    <button class="channel-btn channel-ml"     onclick="selectChannel('ml')">Mercado Libre</button>
+    <button class="channel-btn channel-amazon" onclick="selectChannel('amazon')">Amazon</button>
   </div>
 
   <!-- ── SCANNER ───────────────────────────────────────────── -->
@@ -568,19 +568,18 @@ function goHome() {
 }
 
 /* ── Inicio de flujo ───────────────────────────────────────── */
-// En modo devolución: primero seleccionar canal, luego escanear.
-// En modo envío: ir directo al scanner.
+// Ambos modos muestran el selector de canal antes de escanear.
 function startFlow() {
-  if (currentMode === 'devolucion') {
-    currentChannel = null;
-    showScreen('screen-channel-select');
-  } else {
-    startScanner();
-  }
+  currentChannel = null;
+  document.getElementById('channel-select-subtitle').innerHTML =
+    currentMode === 'devolucion'
+      ? 'Selecciona el canal<br>de la devolución'
+      : 'Selecciona el canal<br>del envío';
+  showScreen('screen-channel-select');
 }
 
-/* ── Selección de canal (devolución) ──────────────────────── */
-function selectDevChannel(channel) {
+/* ── Selección de canal (envío y devolución) ──────────────── */
+function selectChannel(channel) {
   currentChannel = channel;
   startScanner();
 }
@@ -622,12 +621,7 @@ async function stopScanner() {
 
 function cancelScanner() {
   stopScanner();
-  // En devolución, volver a la selección de canal; en envío, a home
-  if (currentMode === 'devolucion') {
-    showScreen('screen-channel-select');
-  } else {
-    showScreen('screen-home');
-  }
+  showScreen('screen-channel-select'); // ambos modos vuelven al selector de canal
 }
 
 /* ── Escaneo exitoso ───────────────────────────────────────── */
@@ -639,10 +633,12 @@ async function onScanSuccess(tracking) {
   showScreen('screen-loading');
 
   try {
-    // Construir URL según modo
-    let url = APPS_SCRIPT_URL + '?tracking=' + encodeURIComponent(tracking);
+    // Construir URL — siempre enviar el canal seleccionado
+    let url = APPS_SCRIPT_URL
+      + '?tracking=' + encodeURIComponent(tracking)
+      + '&channel='  + encodeURIComponent(currentChannel);
     if (currentMode === 'devolucion') {
-      url += '&mode=devolucion&channel=' + encodeURIComponent(currentChannel);
+      url += '&mode=devolucion';
     }
 
     const res  = await fetch(url, { redirect: 'follow' });
@@ -651,7 +647,7 @@ async function onScanSuccess(tracking) {
     if (data.error) {
       alert('Error del servidor:\n' + data.error);
       scanning = false;
-      showScreen(currentMode === 'devolucion' ? 'screen-channel-select' : 'screen-home');
+      showScreen('screen-channel-select');
       return;
     }
 

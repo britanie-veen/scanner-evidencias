@@ -366,6 +366,52 @@
       text-align: center;
       margin-bottom: 16px;
     }
+    /* ── Conteo en vivo (home) ─────────────────────────────── */
+    .count-summary {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.8;
+      margin: 2px 0 18px;
+      min-height: 14px;
+    }
+    /* ── Foto de catálogo (pantalla de pedido) ─────────────── */
+    .catalog-photo {
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      margin: 0 auto 16px;
+      display: block;
+    }
+    /* ── Condición del producto (devoluciones) ─────────────── */
+    .condition-toggle {
+      display: flex;
+      width: 100%;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .condition-btn {
+      flex: 1;
+      padding: 16px 10px;
+      border-radius: 2px;
+      border: 1.5px solid var(--black);
+      background: var(--white);
+      color: var(--black);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .condition-btn.active { background: var(--black); color: var(--white); }
   </style>
 </head>
 <body>
@@ -392,6 +438,8 @@
       <button class="mode-btn active" id="btn-envio" onclick="setMode('envio')">Envío</button>
       <button class="mode-btn" id="btn-devolucion" onclick="setMode('devolucion')">Devolución</button>
     </div>
+    <!-- Conteo en vivo del día (se actualiza al cambiar de modo / volver a Home) -->
+    <p class="count-summary" id="count-summary">Cargando conteo del día…</p>
     <button class="btn btn-primary" onclick="startFlow()">
       Escanear guía
     </button>
@@ -448,6 +496,8 @@
       <span class="mode-label-key">Modo</span>
       <span id="found-mode-label">Envío</span>
     </div>
+    <!-- Foto de catálogo del producto (solo si existe foto para el SKU en Drive) -->
+    <img class="catalog-photo" id="info-catalog-photo" alt="Foto del producto" style="display:none">
     <div class="card" id="found-card">
       <div class="card-row">
         <span class="label">SKU</span>
@@ -465,6 +515,11 @@
         <span class="label">Estado</span>
         <span class="value"><span class="status-badge" id="info-status">—</span></span>
       </div>
+    </div>
+    <!-- Condición del producto — solo en modo Devolución, obligatoria antes de la foto -->
+    <div class="condition-toggle" id="condition-toggle" style="display:none">
+      <button type="button" class="condition-btn" id="cond-bueno" onclick="setCondition('Buen Estado')">✅ Buen estado</button>
+      <button type="button" class="condition-btn" id="cond-merma" onclick="setCondition('Merma')">⚠️ Merma</button>
     </div>
     <button class="btn btn-primary" id="photo-btn" onclick="triggerPhoto()">
       📸&nbsp; Tomar foto de evidencia
@@ -535,19 +590,43 @@ const CHANNEL_LABELS = {
   amazon: ['AMAZON', 'channel-amazon']
 };
 
-let scanner         = null;
-let scanning        = false;
-let currentTracking = null;
-let currentChannel  = null;   // canal activo (auto-detect en envío, manual en devolución)
-let currentRow      = null;   // fila en el Sheet (0 = nueva entrada en devolución)
-let currentPhoto    = null;
-let currentMode     = 'envio';   // 'envio' | 'devolucion'
+let scanner          = null;
+let scanning         = false;
+let currentTracking  = null;
+let currentChannel   = null;   // canal activo (auto-detect en envío, manual en devolución)
+let currentRow       = null;   // fila en el Sheet (0 = nueva entrada en devolución)
+let currentPhoto     = null;
+let currentMode      = 'envio';   // 'envio' | 'devolucion'
+let currentCondition = null;      // 'Buen Estado' | 'Merma' — solo devolución
 
 /* ── Modo ──────────────────────────────────────────────────── */
 function setMode(mode) {
   currentMode = mode;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + mode).classList.add('active');
+  loadCounts();
+}
+
+/* ── Conteo en vivo del día ────────────────────────────────── */
+async function loadCounts() {
+  const el = document.getElementById('count-summary');
+  if (!el) return;
+  el.textContent = 'Cargando conteo del día…';
+  try {
+    const res  = await fetch(
+      APPS_SCRIPT_URL + '?action=counts&mode=' + encodeURIComponent(currentMode),
+      { redirect: 'follow' }
+    );
+    const data = await res.json();
+    if (!data.counts) { el.textContent = ''; return; }
+    const order = ['temu', 'shein', 'tiktok', 'ml', 'amazon'];
+    const parts = order
+      .filter(ch => data.counts[ch] !== undefined)
+      .map(ch => (CHANNEL_LABELS[ch] ? CHANNEL_LABELS[ch][0] : ch.toUpperCase()) + ' ' + data.counts[ch]);
+    el.textContent = 'Hoy · ' + parts.join(' · ');
+  } catch (err) {
+    el.textContent = ''; // si falla, no bloquea la pantalla — solo no se muestra el conteo
+  }
 }
 
 /* ── Navegación ────────────────────────────────────────────── */
@@ -559,12 +638,14 @@ function showScreen(id) {
 
 function goHome() {
   stopScanner();
-  scanning        = false;
-  currentTracking = null;
-  currentChannel  = null;
-  currentRow      = null;
-  currentPhoto    = null;
+  scanning         = false;
+  currentTracking  = null;
+  currentChannel   = null;
+  currentRow       = null;
+  currentPhoto     = null;
+  currentCondition = null;
   showScreen('screen-home');
+  loadCounts();
 }
 
 /* ── Inicio de flujo ───────────────────────────────────────── */
@@ -624,6 +705,13 @@ function cancelScanner() {
   showScreen('screen-channel-select'); // ambos modos vuelven al selector de canal
 }
 
+/* ── Condición del producto (solo devoluciones) ───────────────── */
+function setCondition(value) {
+  currentCondition = value;
+  document.getElementById('cond-bueno').classList.toggle('active', value === 'Buen Estado');
+  document.getElementById('cond-merma').classList.toggle('active', value === 'Merma');
+}
+
 /* ── Escaneo exitoso ───────────────────────────────────────── */
 async function onScanSuccess(tracking) {
   if (scanning) return;
@@ -666,6 +754,16 @@ async function onScanSuccess(tracking) {
 
       document.getElementById('info-tracking').textContent = tracking;
 
+      // Foto de catálogo del producto (si hay una para el SKU)
+      const catalogImg = document.getElementById('info-catalog-photo');
+      if (data.catalogPhoto) {
+        catalogImg.src = data.catalogPhoto;
+        catalogImg.style.display = 'block';
+      } else {
+        catalogImg.removeAttribute('src');
+        catalogImg.style.display = 'none';
+      }
+
       // Banner de nueva entrada
       const newBanner = document.getElementById('new-entry-banner');
       if (!data.found && currentMode === 'devolucion') {
@@ -704,6 +802,13 @@ async function onScanSuccess(tracking) {
         modeLabel.textContent = 'Envío';
         modeIndicator.classList.remove('devolucion');
       }
+
+      // Selector de condición (Buen Estado / Merma) — pendiente, se activa
+      // junto con las fotos de catálogo. El HTML/CSS ya está listo, solo
+      // falta mostrarlo (cambiar 'none' por 'flex' en modo devolución) y
+      // mandar currentCondition en submitPhoto cuando se retome.
+      currentCondition = null;
+      document.getElementById('condition-toggle').style.display = 'none';
 
       // Texto del botón de foto
       document.getElementById('photo-btn').textContent =
@@ -793,6 +898,9 @@ async function submitPhoto() {
     showScreen('screen-preview');
   }
 }
+
+/* ── Init ──────────────────────────────────────────────────── */
+loadCounts(); // conteo del día visible desde que abre la app en Home
 </script>
 </body>
 </html>

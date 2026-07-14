@@ -340,16 +340,6 @@
       margin-bottom: 20px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    /* ── Preview foto ──────────────────────────────────────── */
-    #photo-preview {
-      width: 100%;
-      max-width: 340px;
-      border-radius: 4px;
-      object-fit: cover;
-      margin-bottom: 24px;
-      display: block;
-      border: 1px solid var(--border);
-    }
     .spacer { flex: 1; }
     .divider { width: 40px; height: 2px; background: var(--black); margin: 8px auto 0; }
     /* ── Banner nueva devolución ───────────────────────────── */
@@ -412,6 +402,73 @@
       -webkit-tap-highlight-color: transparent;
     }
     .condition-btn.active { background: var(--black); color: var(--white); }
+    /* ── Fotos de evidencia (varias por etiqueta) ──────────────── */
+    .photo-strip {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .photo-thumb {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-thumb .remove {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 22px;
+      height: 22px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(13,13,13,.82);
+      color: var(--white);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .photo-thumb .num {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      padding: 2px 6px;
+      background: rgba(13,13,13,.82);
+      color: var(--white);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .05em;
+    }
+    .photo-count {
+      width: 100%;
+      font-size: 10px;
+      font-weight: 200;
+      color: var(--muted);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    /* ── Contador de sesión del canal ──────────────────────────── */
+    .session-count {
+      width: 100%;
+      padding: 10px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      text-align: center;
+      color: var(--black);
+    }
   </style>
 </head>
 <body>
@@ -467,10 +524,11 @@
       <button class="back-btn" onclick="cancelScanner()">&#8592;</button>
       <h2 id="scanner-title">Escanear código</h2>
     </div>
+    <div class="session-count" id="scanner-session-count" style="display:none"></div>
     <div id="reader"></div>
     <p class="scan-hint" id="scan-hint-text">Apunta a cualquier código<br>de la etiqueta</p>
     <div class="spacer"></div>
-    <button class="btn btn-secondary" onclick="cancelScanner()">Cancelar</button>
+    <button class="btn btn-secondary" id="scanner-exit-btn" onclick="goHome()">Terminar canal</button>
   </div>
 
   <!-- ── LOADING ───────────────────────────────────────────── -->
@@ -482,7 +540,7 @@
   <!-- ── FOUND ─────────────────────────────────────────────── -->
   <div id="screen-found" class="screen">
     <div class="screen-header">
-      <button class="back-btn" onclick="goHome()">&#8592;</button>
+      <button class="back-btn" onclick="scanAgainSameChannel()">&#8592;</button>
       <h2 id="found-title">Pedido encontrado</h2>
     </div>
     <div id="info-channel-badge" class="channel-badge" style="margin-bottom:8px"></div>
@@ -507,6 +565,10 @@
         <span class="label">Cantidad</span>
         <span class="value" id="info-qty">—</span>
       </div>
+      <div class="card-row" id="row-remision">
+        <span class="label">Remisión</span>
+        <span class="value" id="info-remision">—</span>
+      </div>
       <div class="card-row">
         <span class="label">N° Pedido</span>
         <span class="value" id="info-pedido">—</span>
@@ -521,10 +583,16 @@
       <button type="button" class="condition-btn" id="cond-bueno" onclick="setCondition('Buen Estado')">✅ Buen estado</button>
       <button type="button" class="condition-btn" id="cond-merma" onclick="setCondition('Merma')">⚠️ Merma</button>
     </div>
-    <button class="btn btn-primary" id="photo-btn" onclick="triggerPhoto()">
+    <!-- Fotos tomadas para ESTA etiqueta (etiqueta, caja, pedido… las que hagan falta) -->
+    <p class="photo-count" id="photo-count" style="display:none"></p>
+    <div class="photo-strip" id="photo-strip" style="display:none"></div>
+    <button class="btn btn-secondary" id="photo-btn" onclick="triggerPhoto()">
       📸&nbsp; Tomar foto de evidencia
     </button>
-    <button class="btn btn-secondary" onclick="goHome()">Cancelar</button>
+    <button class="btn btn-primary" id="send-btn" onclick="submitPhoto()" style="display:none">
+      Enviar evidencia
+    </button>
+    <button class="btn btn-secondary" onclick="scanAgainSameChannel()">Cancelar (seguir en este canal)</button>
     <input type="file" id="photo-input" accept="image/*" capture="environment"
            style="display:none" onchange="handlePhoto(this)">
   </div>
@@ -537,29 +605,14 @@
       <div class="tracking-badge" id="not-found-tracking" style="margin-bottom:0"></div>
       <p class="subtitle">Esta guía no está registrada<br>en el Sheet.</p>
     </div>
-    <button class="btn btn-primary" onclick="startFlow()">Intentar de nuevo</button>
-    <button class="btn btn-secondary" onclick="goHome()">Cancelar</button>
-  </div>
-
-  <!-- ── PREVIEW ───────────────────────────────────────────── -->
-  <div id="screen-preview" class="screen">
-    <div class="screen-header">
-      <button class="back-btn" onclick="showScreen('screen-found')">&#8592;</button>
-      <h2>Confirmar foto</h2>
-    </div>
-    <img id="photo-preview" alt="Evidencia">
-    <button class="btn btn-success" onclick="submitPhoto()">
-      Enviar evidencia
-    </button>
-    <button class="btn btn-secondary" onclick="triggerPhoto()">
-      Tomar otra foto
-    </button>
+    <button class="btn btn-primary" onclick="scanAgainSameChannel()">Intentar de nuevo</button>
+    <button class="btn btn-secondary" onclick="goHome()">Cambiar de canal</button>
   </div>
 
   <!-- ── UPLOADING ─────────────────────────────────────────── -->
   <div id="screen-uploading" class="screen">
     <div class="spinner"></div>
-    <p class="subtitle">Subiendo evidencia a Drive...</p>
+    <p class="subtitle" id="uploading-subtitle">Subiendo evidencia a Drive...</p>
   </div>
 
   <!-- ── SUCCESS ───────────────────────────────────────────── -->
@@ -574,8 +627,12 @@
         Foto guardada en Drive ✓
       </p>
     </div>
-    <button class="btn btn-primary" onclick="goHome()">
+    <div class="session-count" id="success-session-count"></div>
+    <button class="btn btn-primary" id="success-scan-btn" onclick="scanAgainSameChannel()">
       Escanear otra guía
+    </button>
+    <button class="btn btn-secondary" id="success-exit-btn" onclick="goHome()">
+      Terminar canal
     </button>
   </div>
 
@@ -593,11 +650,19 @@ const CHANNEL_LABELS = {
 let scanner          = null;
 let scanning         = false;
 let currentTracking  = null;
-let currentChannel   = null;   // canal activo (auto-detect en envío, manual en devolución)
+let currentChannel   = null;   // canal activo (se queda fijo durante toda la sesión)
 let currentRow       = null;   // fila en el Sheet (0 = nueva entrada en devolución)
-let currentPhoto     = null;
 let currentMode      = 'envio';   // 'envio' | 'devolucion'
 let currentCondition = null;      // 'Buen Estado' | 'Merma' — solo devolución
+
+// Fotos de la etiqueta que se está trabajando AHORA. Elena toma las que
+// necesite (la etiqueta, la caja, el pedido…) antes de enviar.
+let currentPhotos    = [];    // base64 comprimido, lo que se manda al servidor
+let currentThumbs    = [];    // object URLs para las miniaturas en pantalla
+
+// Cuántas etiquetas lleva escaneadas en ESTA sesión del canal. Se reinicia
+// al entrar a un canal y al terminarlo — es el "voy 12 de Amazon" de Elena.
+let sessionCount     = 0;
 
 /* ── Modo ──────────────────────────────────────────────────── */
 function setMode(mode) {
@@ -636,16 +701,44 @@ function showScreen(id) {
   window.scrollTo(0, 0);
 }
 
+// Termina la sesión del canal y regresa al inicio. Es la ÚNICA salida al
+// Home — mientras Elena esté vaciando Amazon, la app nunca la manda sola
+// de regreso al menú.
 function goHome() {
   stopScanner();
   scanning         = false;
   currentTracking  = null;
   currentChannel   = null;
   currentRow       = null;
-  currentPhoto     = null;
   currentCondition = null;
+  sessionCount     = 0;
+  clearPhotos();
   showScreen('screen-home');
   loadCounts();
+}
+
+/* ── Etiqueta del canal activo ─────────────────────────────── */
+function channelName() {
+  const l = CHANNEL_LABELS[currentChannel];
+  return l ? l[0] : '';
+}
+
+// Pinta "AMAZON · 12 escaneadas" en el escáner y en la pantalla de éxito,
+// y nombra los botones con el canal para que nunca haya duda de dónde está.
+function renderSession() {
+  const nombre = channelName();
+  const texto  = sessionCount === 0
+    ? nombre + ' · sesión iniciada'
+    : nombre + ' · ' + sessionCount + (sessionCount === 1 ? ' escaneada' : ' escaneadas');
+
+  const elScan = document.getElementById('scanner-session-count');
+  elScan.textContent   = texto;
+  elScan.style.display = 'block';
+
+  document.getElementById('success-session-count').textContent = texto;
+  document.getElementById('scanner-exit-btn').textContent      = 'Terminar ' + nombre;
+  document.getElementById('success-exit-btn').textContent      = 'Terminar ' + nombre;
+  document.getElementById('success-scan-btn').textContent      = 'Escanear otra de ' + nombre;
 }
 
 /* ── Inicio de flujo ───────────────────────────────────────── */
@@ -660,24 +753,28 @@ function startFlow() {
 }
 
 /* ── Selección de canal (envío y devolución) ──────────────── */
+// Aquí arranca la SESIÓN del canal: a partir de este momento Elena se
+// queda escaneando este canal —etiqueta tras etiqueta— hasta que toque
+// "Terminar {canal}". El contador de sesión empieza en cero.
 function selectChannel(channel) {
   currentChannel = channel;
+  sessionCount   = 0;
   startScanner();
 }
 
 /* ── Scanner ───────────────────────────────────────────────── */
+// El canal se queda "clavado" hasta que se elige cambiarlo (goHome) —
+// así Elena/Edwin pueden trabajar un canal seguido sin reseleccionarlo
+// después de cada escaneo. El título siempre muestra el canal activo,
+// en envío y en devolución, para que quede claro en cuál está.
 async function startScanner() {
-  // Actualizar texto del scanner según modo
-  if (currentMode === 'devolucion') {
-    const labels = CHANNEL_LABELS[currentChannel] || ['—', ''];
-    document.getElementById('scanner-title').textContent = 'Escanear · ' + labels[0];
-    document.getElementById('scan-hint-text').textContent =
-      'Escanea el código\nde la devolución';
-  } else {
-    document.getElementById('scanner-title').textContent = 'Escanear código';
-    document.getElementById('scan-hint-text').textContent =
-      'Apunta a cualquier código\nde la etiqueta';
-  }
+  const labels = CHANNEL_LABELS[currentChannel] || ['—', ''];
+  document.getElementById('scanner-title').textContent = 'Escanear · ' + labels[0];
+  document.getElementById('scan-hint-text').textContent =
+    currentMode === 'devolucion'
+      ? 'Escanea el código\nde la devolución'
+      : 'Apunta a cualquier código\nde la etiqueta';
+  renderSession();
 
   showScreen('screen-scanner');
   scanning = false;
@@ -696,13 +793,25 @@ async function startScanner() {
   }
 }
 
+// Reinicia el escáner para el MISMO canal/modo — se usa después de un
+// escaneo exitoso, un "no encontrado", o un error, para no forzar a
+// reseleccionar canal cada vez.
+function scanAgainSameChannel() {
+  currentTracking  = null;
+  currentRow       = null;
+  currentCondition = null;
+  scanning         = false;
+  clearPhotos();
+  startScanner();
+}
+
 async function stopScanner() {
   try { if (scanner && scanner.isScanning) await scanner.stop(); } catch (_) {}
 }
 
 function cancelScanner() {
   stopScanner();
-  showScreen('screen-channel-select'); // ambos modos vuelven al selector de canal
+  showScreen('screen-channel-select'); // salida deliberada: permite cambiar de canal
 }
 
 /* ── Condición del producto (solo devoluciones) ───────────────── */
@@ -734,8 +843,7 @@ async function onScanSuccess(tracking) {
 
     if (data.error) {
       alert('Error del servidor:\n' + data.error);
-      scanning = false;
-      showScreen('screen-channel-select');
+      scanAgainSameChannel(); // se queda en el mismo canal, no obliga a reseleccionar
       return;
     }
 
@@ -766,6 +874,12 @@ async function onScanSuccess(tracking) {
 
       // Banner de nueva entrada
       const newBanner = document.getElementById('new-entry-banner');
+      // Remisión: solo se muestra si el tab de ese canal la tiene
+      const rowRemision = document.getElementById('row-remision');
+      const remision    = data.remision;
+      rowRemision.style.display = (remision !== undefined && remision !== '') ? 'flex' : 'none';
+      document.getElementById('info-remision').textContent = remision || '—';
+
       if (!data.found && currentMode === 'devolucion') {
         newBanner.style.display = 'block';
         document.getElementById('found-card').style.opacity = '0.4';
@@ -775,6 +889,7 @@ async function onScanSuccess(tracking) {
         document.getElementById('info-pedido').textContent  = '—';
         document.getElementById('info-status').textContent  = 'Pendiente';
         document.getElementById('info-status').className    = 'status-badge status-proceso';
+        rowRemision.style.display = 'none';
       } else {
         newBanner.style.display = 'none';
         document.getElementById('found-card').style.opacity = '1';
@@ -810,11 +925,8 @@ async function onScanSuccess(tracking) {
       currentCondition = null;
       document.getElementById('condition-toggle').style.display = 'none';
 
-      // Texto del botón de foto
-      document.getElementById('photo-btn').textContent =
-        currentMode === 'devolucion'
-          ? '📸  Tomar foto de devolución'
-          : '📸  Tomar foto de evidencia';
+      // Fotos: empezamos de cero para cada etiqueta nueva
+      clearPhotos();
 
       showScreen('screen-found');
 
@@ -826,24 +938,71 @@ async function onScanSuccess(tracking) {
 
   } catch (err) {
     alert('Error de conexión:\n' + err.message);
-    scanning = false;
-    showScreen('screen-home');
+    scanAgainSameChannel(); // se queda en el mismo canal, no obliga a reseleccionar
   }
 }
 
-/* ── Foto ──────────────────────────────────────────────────── */
+/* ── Fotos (varias por etiqueta) ───────────────────────────── */
+// Elena toma las fotos que necesite —la etiqueta, la caja, el pedido— y
+// se le van acumulando en miniatura. No hay número fijo: con una basta,
+// y puede tomar las que quiera. Todas se suben juntas al presionar Enviar.
+
 function triggerPhoto() {
   const input = document.getElementById('photo-input');
-  input.value = '';
+  input.value = '';   // permite volver a elegir la misma foto
   input.click();
 }
 
 async function handlePhoto(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
-  document.getElementById('photo-preview').src = URL.createObjectURL(file);
-  currentPhoto = await compressImage(file);
-  showScreen('screen-preview');
+  currentThumbs.push(URL.createObjectURL(file));
+  currentPhotos.push(await compressImage(file));
+  renderPhotos();
+}
+
+function removePhoto(i) {
+  URL.revokeObjectURL(currentThumbs[i]);   // libera memoria del celular
+  currentThumbs.splice(i, 1);
+  currentPhotos.splice(i, 1);
+  renderPhotos();
+}
+
+function clearPhotos() {
+  currentThumbs.forEach(u => URL.revokeObjectURL(u));
+  currentThumbs = [];
+  currentPhotos = [];
+  renderPhotos();
+}
+
+// Dibuja las miniaturas y decide qué botones se ven: sin fotos no se puede
+// enviar; con al menos una aparece "Enviar evidencia (N)".
+function renderPhotos() {
+  const strip  = document.getElementById('photo-strip');
+  const count  = document.getElementById('photo-count');
+  const sendBt = document.getElementById('send-btn');
+  const photoBt= document.getElementById('photo-btn');
+  if (!strip) return;
+
+  strip.innerHTML = '';
+  currentThumbs.forEach((url, i) => {
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.innerHTML =
+      '<img src="' + url + '" alt="Evidencia ' + (i + 1) + '">' +
+      '<span class="num">' + (i + 1) + '</span>' +
+      '<button type="button" class="remove" aria-label="Quitar foto">✕</button>';
+    div.querySelector('.remove').onclick = () => removePhoto(i);
+    strip.appendChild(div);
+  });
+
+  const n = currentPhotos.length;
+  strip.style.display  = n ? 'grid'  : 'none';
+  count.style.display  = n ? 'block' : 'none';
+  count.textContent    = n === 1 ? '1 foto tomada' : n + ' fotos tomadas';
+  sendBt.style.display = n ? 'block' : 'none';
+  sendBt.textContent   = n === 1 ? 'Enviar evidencia' : 'Enviar ' + n + ' fotos';
+  photoBt.textContent  = n ? '📸  Agregar otra foto' : '📸  Tomar foto de evidencia';
 }
 
 function compressImage(file) {
@@ -869,33 +1028,50 @@ function compressImage(file) {
 
 /* ── Subir evidencia ───────────────────────────────────────── */
 async function submitPhoto() {
-  if (!currentPhoto) { alert('Primero toma una foto.'); return; }
+  const n = currentPhotos.length;
+  if (!n) { alert('Primero toma al menos una foto.'); return; }
+
+  document.getElementById('uploading-subtitle').textContent =
+    n === 1 ? 'Subiendo evidencia a Drive...' : 'Subiendo ' + n + ' fotos a Drive...';
   showScreen('screen-uploading');
+
   const payload = JSON.stringify({
     tracking: currentTracking,
     channel:  currentChannel,
-    row:      currentRow,   // 0 = nueva entrada en devolución
-    photo:    currentPhoto,
+    row:      currentRow,     // 0 = nueva entrada en devolución
+    photos:   currentPhotos,  // todas las fotos de esta etiqueta
     mode:     currentMode
   });
+
   try {
     const res  = await fetch(APPS_SCRIPT_URL, { method: 'POST', redirect: 'follow', body: payload });
     const data = await res.json();
     if (data.success) {
+      sessionCount++;               // una etiqueta más vaciada de este canal
+      const fotos = (data.fotos || n);
+      const linea = fotos === 1
+        ? 'Foto guardada en Drive ✓'
+        : fotos + ' fotos guardadas en Drive ✓';
+
       document.getElementById('success-tracking').textContent = currentTracking;
       document.getElementById('success-subtitle').innerHTML =
         currentMode === 'devolucion'
           ? (currentRow === 0
-              ? 'Devolución registrada en el Sheet ✓<br>Foto guardada en Drive ✓'
-              : 'Estado → Revisada en el Sheet ✓<br>Foto guardada en Drive ✓')
-          : 'Estado → Listo en el Sheet ✓<br>Foto guardada en Drive ✓';
+              ? 'Devolución registrada en el Sheet ✓<br>' + linea
+              : 'Estado → Revisada en el Sheet ✓<br>' + linea)
+          : 'Estado → Listo en el Sheet ✓<br>' + linea;
+
+      renderSession();
+      clearPhotos();
       showScreen('screen-success');
     } else {
       throw new Error(data.error || 'Error en el servidor');
     }
   } catch (err) {
-    alert('Error al subir la evidencia:\n' + err.message + '\n\nIntenta de nuevo.');
-    showScreen('screen-preview');
+    // Las fotos NO se pierden: regresa a la pantalla del pedido con las
+    // miniaturas intactas para que solo vuelva a presionar Enviar.
+    alert('Error al subir la evidencia:\n' + err.message + '\n\nTus fotos siguen aquí — intenta enviar de nuevo.');
+    showScreen('screen-found');
   }
 }
 

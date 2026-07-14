@@ -834,9 +834,42 @@ function setCondition(value) {
   document.getElementById('cond-merma').classList.toggle('active', value === 'Merma');
 }
 
+/* ── Limpieza del código escaneado ─────────────────────────── */
+// Las etiquetas de Amazon traen el Identificador dentro del código de barras,
+// pero envuelto:   SPB5fMbDkt_001_v  →  PB5fMbDkt
+// Le quitamos la "S" del inicio y el sufijo "_001_v".
+// Cualquier otro código se regresa igual, así los demás canales no se tocan.
+function limpiarCodigo(raw) {
+  const txt = String(raw || '').trim();
+  const m   = txt.match(/^S(P[A-Za-z0-9]{8})(?:_.*)?$/);
+  return m ? m[1] : txt;
+}
+
+// La etiqueta de Amazon trae DOS códigos de barras: el de Amazon (el que
+// sirve) y el de la paquetería (10 dígitos, ej. 4098925250) — ese número no
+// existe en el Sheet ni en Monday, no sirve para nada.
+// Si la cámara agarra el de la paquetería, NO tumbamos el escaneo: lo
+// ignoramos, avisamos en pantalla y seguimos esperando el bueno. Así Elena
+// no pierde tiempo con un "no encontrada" que no era su culpa.
+function esCodigoDePaqueteria(codigo) {
+  return currentMode === 'envio'
+      && currentChannel === 'amazon'
+      && !/^P[A-Za-z0-9]{8}$/.test(codigo);
+}
+
 /* ── Escaneo exitoso ───────────────────────────────────────── */
-async function onScanSuccess(tracking) {
+async function onScanSuccess(raw) {
   if (scanning) return;
+
+  const tracking = limpiarCodigo(raw);
+
+  if (esCodigoDePaqueteria(tracking)) {
+    // Sigue escaneando — no marcamos scanning = true ni paramos la cámara
+    document.getElementById('scan-hint-text').textContent =
+      'Ese es el código de la paquetería.\nApunta al código de Amazon.';
+    return;
+  }
+
   scanning = true;
   await stopScanner();
   currentTracking = tracking;

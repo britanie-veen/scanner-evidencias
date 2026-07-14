@@ -601,10 +601,10 @@
   <div id="screen-not-found" class="screen">
     <div class="hero">
       <div class="state-icon error">✗</div>
-      <h2>No encontrada</h2>
+      <h2 id="not-found-title">No encontrada</h2>
       <p class="subtitle" style="font-size:13px">La app leyó este código:</p>
       <div class="tracking-badge" id="not-found-tracking" style="margin-bottom:0"></div>
-      <p class="subtitle" style="font-size:15px">
+      <p class="subtitle" style="font-size:15px" id="not-found-msg">
         No está registrado en el Sheet<br>de este canal.
       </p>
     </div>
@@ -835,26 +835,46 @@ function setCondition(value) {
 }
 
 /* ── Limpieza del código escaneado ─────────────────────────── */
-// Las etiquetas de Amazon traen el Identificador dentro del código de barras,
-// pero envuelto:   SPB5fMbDkt_001_v  →  PB5fMbDkt
+// Las etiquetas de Amazon traen la referencia dentro del código de barras,
+// pero envuelta:   SPB5fMbDkt_001_v  →  PB5fMbDkt
+//                  SFr6wh21NN_001_v  →  Fr6wh21NN
 // Le quitamos la "S" del inicio y el sufijo "_001_v".
-// Cualquier otro código se regresa igual, así los demás canales no se tocan.
+//
+// La referencia son 9 caracteres. En el tablero hay de tres tipos:
+//   P… (2,368 — los FLEX)   B… (282)   L… (1)
+// Ojo: las etiquetas FBM traen referencias F…, que NO están en el tablero.
+// Aun así las dejamos pasar: es mejor que la app diga "no encontrada" y
+// muestre el código, a que lo ignore en silencio y parezca descompuesta.
+//
+// Cualquier otro código se regresa igual — los demás canales no se tocan.
 function limpiarCodigo(raw) {
   const txt = String(raw || '').trim();
-  const m   = txt.match(/^S(P[A-Za-z0-9]{8})(?:_.*)?$/);
+  const m   = txt.match(/^S([A-Za-z][A-Za-z0-9]{8})(?:_.*)?$/);
   return m ? m[1] : txt;
 }
 
-// La etiqueta de Amazon trae DOS códigos de barras: el de Amazon (el que
-// sirve) y el de la paquetería (10 dígitos, ej. 4098925250) — ese número no
-// existe en el Sheet ni en Monday, no sirve para nada.
-// Si la cámara agarra el de la paquetería, NO tumbamos el escaneo: lo
-// ignoramos, avisamos en pantalla y seguimos esperando el bueno. Así Elena
-// no pierde tiempo con un "no encontrada" que no era su culpa.
-function esCodigoDePaqueteria(codigo) {
+// Las etiquetas de Amazon traen VARIOS códigos de barras, y solo uno sirve:
+//   ✅ La referencia de Amazon  → PB5fMbDkt, P7ZtzLym3, Bfw2KLh5f…  (9 caracteres)
+//   ❌ El waybill de la paquetería → 4098925250       (10 dígitos)
+//   ❌ El tracking de Amazon       → TBM706963079009
+//   ❌ El tracking DHL             → JJD0081106264098925250
+//   ❌ El routing                  → 2LMX45070+46000000
+//
+// Si la cámara agarra uno de los inservibles, NO tumbamos el escaneo: lo
+// ignoramos, avisamos en pantalla, y seguimos esperando el bueno. Así Elena
+// no se come un "no encontrada" que no era su culpa.
+function esCodigoInservible(codigo) {
+  if (currentMode !== 'envio' || currentChannel !== 'amazon') return false;
+  return !/^[A-Za-z][A-Za-z0-9]{8}$/.test(codigo);
+}
+
+// Las etiquetas FBM traen una referencia que empieza con F (ej. Fr6wh21NN).
+// Esas referencias NO existen en el tablero —los pedidos FBM no entran a este
+// proceso de evidencias— así que no tiene caso ni buscarlas.
+function esEtiquetaFBM(codigo) {
   return currentMode === 'envio'
       && currentChannel === 'amazon'
-      && !/^P[A-Za-z0-9]{8}$/.test(codigo);
+      && /^F[A-Za-z0-9]{8}$/.test(codigo);
 }
 
 /* ── Escaneo exitoso ───────────────────────────────────────── */
@@ -863,10 +883,25 @@ async function onScanSuccess(raw) {
 
   const tracking = limpiarCodigo(raw);
 
-  if (esCodigoDePaqueteria(tracking)) {
+  if (esCodigoInservible(tracking)) {
     // Sigue escaneando — no marcamos scanning = true ni paramos la cámara
     document.getElementById('scan-hint-text').textContent =
-      'Ese es el código de la paquetería.\nApunta al código de Amazon.';
+      'Ese código no sirve (es de la paquetería).\nApunta al código de Amazon.';
+    return;
+  }
+
+  // Etiqueta FBM: su referencia empieza con F (ej. Fr6wh21NN) y NO existe en
+  // el tablero — los pedidos FBM no pasan por este proceso de evidencias.
+  // Se lo decimos claro, en vez de dejar que se coma un "No encontrada" y
+  // pierda tiempo pensando que la app está fallando.
+  if (esEtiquetaFBM(tracking)) {
+    scanning = true;
+    await stopScanner();
+    document.getElementById('not-found-tracking').textContent = tracking;
+    document.getElementById('not-found-title').textContent    = 'Pedido FBM';
+    document.getElementById('not-found-msg').innerHTML =
+      'Los pedidos <b>FBM</b> no llevan<br>evidencia en el scanner.<br><br>Puedes seguir con la siguiente.';
+    showScreen('screen-not-found');
     return;
   }
 
@@ -977,8 +1012,12 @@ async function onScanSuccess(raw) {
       showScreen('screen-found');
 
     } else {
-      // No encontrado en modo ENVÍO → pantalla de error
+      // No encontrado en modo ENVÍO → pantalla de error.
+      // Se restauran los textos por si venimos de mostrar el aviso de FBM.
       document.getElementById('not-found-tracking').textContent = tracking;
+      document.getElementById('not-found-title').textContent    = 'No encontrada';
+      document.getElementById('not-found-msg').innerHTML =
+        'No está registrado en el Sheet<br>de este canal.';
       showScreen('screen-not-found');
     }
 

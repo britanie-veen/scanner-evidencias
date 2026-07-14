@@ -602,8 +602,11 @@
     <div class="hero">
       <div class="state-icon error">✗</div>
       <h2>No encontrada</h2>
+      <p class="subtitle" style="font-size:13px">La app leyó este código:</p>
       <div class="tracking-badge" id="not-found-tracking" style="margin-bottom:0"></div>
-      <p class="subtitle">Esta guía no está registrada<br>en el Sheet.</p>
+      <p class="subtitle" style="font-size:15px">
+        No está registrado en el Sheet<br>de este canal.
+      </p>
     </div>
     <button class="btn btn-primary" onclick="scanAgainSameChannel()">Intentar de nuevo</button>
     <button class="btn btn-secondary" onclick="goHome()">Cambiar de canal</button>
@@ -781,9 +784,19 @@ async function startScanner() {
   try {
     if (!scanner) scanner = new Html5Qrcode('reader');
     if (scanner.isScanning) await scanner.stop();
+    // Sin formatsToSupport: la cámara acepta TODOS los formatos de código.
+    // Antes solo aceptaba 5 (QR, Code128, DataMatrix, Code39, EAN-13) — y las
+    // etiquetas de Amazon suelen traer PDF417, que quedaba fuera de la lista y
+    // la cámara simplemente lo ignoraba. Aceptar todo cuesta un poco más de
+    // procesamiento por cuadro, pero no vale la pena adivinar qué formato usa
+    // cada canal: que lea lo que haya.
+    //
+    // qrbox más ancho que alto: los códigos de barras son rectangulares y
+    // horizontales; una ventana cuadrada obliga a alejar el celular hasta que
+    // el código quepa, y eso hace más lento el escaneo.
     await scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 240, height: 240 }, formatsToSupport: [0, 5, 6, 3, 9] },
+      { fps: 10, qrbox: { width: 300, height: 180 } },
       onScanSuccess,
       () => {}
     );

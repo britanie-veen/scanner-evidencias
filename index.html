@@ -784,19 +784,30 @@ async function startScanner() {
   try {
     if (!scanner) scanner = new Html5Qrcode('reader');
     if (scanner.isScanning) await scanner.stop();
-    // Sin formatsToSupport: la cámara acepta TODOS los formatos de código.
-    // Antes solo aceptaba 5 (QR, Code128, DataMatrix, Code39, EAN-13) — y las
-    // etiquetas de Amazon suelen traer PDF417, que quedaba fuera de la lista y
-    // la cámara simplemente lo ignoraba. Aceptar todo cuesta un poco más de
-    // procesamiento por cuadro, pero no vale la pena adivinar qué formato usa
-    // cada canal: que lea lo que haya.
+    // ── Formatos de código, por canal ────────────────────────────────
+    // AMAZON: decodifiqué las etiquetas reales y sé exactamente qué traen:
+    //   ✅ Referencia Amazon → Code128 (DHL)  o  DataMatrix (Amazon Logistics)
+    //   ❌ Waybill paquetería → Code39   ← el gran distractor
+    //   ❌ Routing / tracking → Code128 (mismo formato, pero van abajo)
     //
-    // qrbox más ancho que alto: los códigos de barras son rectangulares y
-    // horizontales; una ventana cuadrada obliga a alejar el celular hasta que
-    // el código quepa, y eso hace más lento el escaneo.
+    // Apagar Code39 hace que la cámara NI SIQUIERA VEA el waybill. Antes lo
+    // leía, nosotros lo ignorábamos, volvía a leerlo… y así en círculos: por
+    // eso se sentía lentísimo con la etiqueta DHL (que tiene 4 códigos juntos).
+    // Además, probar 2 formatos por cuadro en vez de todos = decodifica más rápido.
+    //
+    // OTROS CANALES: se quedan con la lista de siempre. No sé qué formato usan
+    // sus etiquetas y no los voy a romper por optimizar Amazon.
+    //   0=QR  3=Code39  5=Code128  6=DataMatrix  9=EAN-13
+    const formatos = (currentChannel === 'amazon' && currentMode === 'envio')
+      ? [5, 6]              // Code128 + DataMatrix
+      : [0, 5, 6, 3, 9];
+
+    // Ventana angosta: los códigos de la etiqueta DHL están apilados y muy
+    // juntos. Una ventana alta abarca varios a la vez y la cámara agarra el
+    // que se le antoja. Angosta, Elena aísla el de arriba y engancha directo.
     await scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 300, height: 180 } },
+      { fps: 15, qrbox: { width: 300, height: 120 }, formatsToSupport: formatos },
       onScanSuccess,
       () => {}
     );

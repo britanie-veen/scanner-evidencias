@@ -207,6 +207,25 @@
     .channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
     .channel-amazon { background: var(--black); color: var(--white); letter-spacing: .06em; }
     /* ── Estado badge ──────────────────────────────────────── */
+    /* ── Pack de ML: varios SKUs en un mismo paquete ──────────
+       Cuando el paquete trae más de un producto se listan todos,
+       cada uno con sus piezas. Elena necesita saber qué va dentro
+       antes de fotografiarlo. Con un solo SKU esto no aparece.   */
+    .sku-linea {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      padding: 3px 0;
+    }
+    .sku-linea + .sku-linea { border-top: 1px dashed rgba(0,0,0,.12); }
+    .sku-nombre { font-weight: 600; }
+    .sku-pzas {
+      font-variant-numeric: tabular-nums;
+      opacity: .65;
+      white-space: nowrap;
+    }
+
     .status-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -655,6 +674,7 @@ let scanning         = false;
 let currentTracking  = null;
 let currentChannel   = null;   // canal activo (se queda fijo durante toda la sesión)
 let currentRow       = null;   // fila en el Sheet (0 = nueva entrada en devolución)
+let currentRows      = [];     // TODAS las filas del paquete (un Pack de ML = varios SKUs)
 let currentMode      = 'envio';   // 'envio' | 'devolucion'
 let currentCondition = null;      // 'Buen Estado' | 'Merma' — solo devolución
 
@@ -713,6 +733,7 @@ function goHome() {
   currentTracking  = null;
   currentChannel   = null;
   currentRow       = null;
+  currentRows      = [];
   currentCondition = null;
   sessionCount     = 0;
   clearPhotos();
@@ -795,12 +816,22 @@ async function startScanner() {
     // eso se sentía lentísimo con la etiqueta DHL (que tiene 4 códigos juntos).
     // Además, probar 2 formatos por cuadro en vez de todos = decodifica más rápido.
     //
-    // OTROS CANALES: se quedan con la lista de siempre. No sé qué formato usan
-    // sus etiquetas y no los voy a romper por optimizar Amazon.
+    // ML: decodifiqué las etiquetas reales (16-jul-2026, 78 etiquetas). Traen
+    // EXACTAMENTE dos códigos, y los dos con la misma guía de 11 dígitos:
+    //   ✅ Code128 → 47537910579
+    //   ✅ QR      → {"id":"47537910579","t":"lm"}   (limpiarCodigo_ le saca el id)
+    // No hay Code39, ni DataMatrix, ni EAN. Apagarlos = menos formatos que
+    // probar por cuadro = decodifica más rápido, igual que en Amazon.
+    // Y como los dos códigos traen lo mismo, Elena puede apuntar a cualquiera:
+    // aquí no hay forma de atinarle al equivocado.
+    //
+    // TEMU / SHEIN / TIKTOK: se quedan con la lista de siempre. No he visto
+    // sus etiquetas y no los voy a romper por optimizar ML.
     //   0=QR  3=Code39  5=Code128  6=DataMatrix  9=EAN-13
-    const formatos = (currentChannel === 'amazon' && currentMode === 'envio')
-      ? [5, 6]              // Code128 + DataMatrix
-      : [0, 5, 6, 3, 9];
+    const formatos =
+      (currentChannel === 'amazon' && currentMode === 'envio') ? [5, 6] :   // Code128 + DataMatrix
+      (currentChannel === 'ml'     && currentMode === 'envio') ? [5, 0] :   // Code128 + QR
+      [0, 5, 6, 3, 9];
 
     // Ventana angosta: los códigos de la etiqueta DHL están apilados y muy
     // juntos. Una ventana alta abarca varios a la vez y la cámara agarra el
@@ -823,6 +854,7 @@ async function startScanner() {
 function scanAgainSameChannel() {
   currentTracking  = null;
   currentRow       = null;
+  currentRows      = [];
   currentCondition = null;
   scanning         = false;
   clearPhotos();
@@ -986,8 +1018,30 @@ async function onScanSuccess(raw) {
         newBanner.style.display = 'none';
         document.getElementById('found-card').style.opacity = '1';
         document.getElementById('found-title').textContent  = 'Pedido encontrado';
-        document.getElementById('info-sku').textContent     = data.sku    || '—';
-        document.getElementById('info-qty').textContent     = (data.qty != null ? data.qty + ' pz' : '—');
+        // Un paquete de ML puede traer VARIOS productos (un "Pack"). El
+        // backend manda un renglón por SKU en data.items. Con uno solo se ve
+        // igual que siempre; con varios se listan todos, porque Elena tiene
+        // que saber qué va dentro antes de fotografiarlo.
+        currentRows = (Array.isArray(data.rows) && data.rows.length) ? data.rows : [data.row];
+        const items = (Array.isArray(data.items) && data.items.length)
+          ? data.items
+          : [{ row: data.row, sku: data.sku, qty: data.qty }];
+
+        if (items.length > 1) {
+          document.getElementById('info-sku').innerHTML =
+            items.map(function (it) {
+              return '<div class="sku-linea"><span class="sku-nombre">' +
+                     (it.sku || '—') + '</span><span class="sku-pzas">' +
+                     (it.qty != null ? it.qty + ' pz' : '') + '</span></div>';
+            }).join('');
+          const total = items.reduce(function (s, it) { return s + (Number(it.qty) || 0); }, 0);
+          document.getElementById('info-qty').textContent =
+            items.length + ' productos · ' + total + ' pz';
+        } else {
+          document.getElementById('info-sku').textContent = items[0].sku || '—';
+          document.getElementById('info-qty').textContent =
+            (items[0].qty != null ? items[0].qty + ' pz' : '—');
+        }
         document.getElementById('info-pedido').textContent  = data.pedido || '—';
 
         const statusEl = document.getElementById('info-status');
@@ -1135,6 +1189,7 @@ async function submitPhoto() {
     tracking: currentTracking,
     channel:  currentChannel,
     row:      currentRow,     // 0 = nueva entrada en devolución
+    rows:     currentRows,    // todas las filas del paquete (Pack de ML)
     photos:   currentPhotos,  // todas las fotos de esta etiqueta
     mode:     currentMode
   });

@@ -890,12 +890,18 @@ async function startScanner() {
       (currentChannel === 'tiktok' && currentMode === 'envio') ? [0]    :   // solo QR (IM+14)
       [0, 5, 6, 3, 9];
 
-    // Ventana angosta: los códigos de la etiqueta DHL están apilados y muy
-    // juntos. Una ventana alta abarca varios a la vez y la cámara agarra el
-    // que se le antoja. Angosta, Elena aísla el de arriba y engancha directo.
+    // Ventana angosta (300×120): los códigos de la etiqueta DHL están apilados
+    // y muy juntos. Una ventana alta abarca varios a la vez y la cámara agarra
+    // el que se le antoja. Angosta, Elena aísla el de arriba y engancha directo.
+    // TikTok es un QR único (cuadrado): con la ventana angosta se ve como
+    // "cámara de código de barras" y cuesta encuadrarlo → ventana cuadrada.
+    const qrbox =
+      (currentChannel === 'tiktok' && currentMode === 'envio')
+        ? { width: 250, height: 250 }   // QR cuadrado
+        : { width: 300, height: 120 };  // barras apiladas (DHL / Code128)
     await scanner.start(
       { facingMode: 'environment' },
-      { fps: 15, qrbox: { width: 300, height: 120 }, formatsToSupport: formatos },
+      { fps: 15, qrbox: qrbox, formatsToSupport: formatos },
       onScanSuccess,
       () => {}
     );

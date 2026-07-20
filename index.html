@@ -895,13 +895,23 @@ async function startScanner() {
     // el que se le antoja. Angosta, Elena aísla el de arriba y engancha directo.
     // TikTok es un QR único (cuadrado): con la ventana angosta se ve como
     // "cámara de código de barras" y cuesta encuadrarlo → ventana cuadrada.
-    const qrbox =
-      (currentChannel === 'tiktok' && currentMode === 'envio')
-        ? { width: 250, height: 250 }   // QR cuadrado
-        : { width: 300, height: 120 };  // barras apiladas (DHL / Code128)
+    const esTikTok = (currentChannel === 'tiktok' && currentMode === 'envio');
+    const qrbox = esTikTok
+      ? { width: 250, height: 250 }   // QR cuadrado
+      : { width: 300, height: 120 };  // barras apiladas (DHL / Code128)
+    // TikTok es un QR único: se lee más rápido con más cuadros por segundo y
+    // SIN intentar la versión "espejo" de cada cuadro (disableFlip) — como la
+    // etiqueta nunca va volteada, ese intento extra solo gasta tiempo. Los
+    // demás canales se quedan igual (fps 15, con flip) para no romper nada.
+    const startCfg = {
+      fps: esTikTok ? 24 : 15,
+      qrbox: qrbox,
+      formatsToSupport: formatos
+    };
+    if (esTikTok) startCfg.disableFlip = true;
     await scanner.start(
       { facingMode: 'environment' },
-      { fps: 15, qrbox: qrbox, formatsToSupport: formatos },
+      startCfg,
       onScanSuccess,
       () => {}
     );

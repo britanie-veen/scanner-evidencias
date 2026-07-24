@@ -905,28 +905,36 @@ async function startScanner() {
     // PDF real, 20/20 páginas) → traen UN SOLO código: un QR con el IM+14
     // dígitos (la columna Nombre). No hay Code128/DataMatrix/EAN. Solo-QR =
     // decodifica más rápido y sin confundirse.
-    // TEMU / SHEIN: se quedan con la lista de siempre. No he visto sus
-    // etiquetas y no los voy a romper por optimizar.
+    // SHEIN: etiquetas reales decodificadas el 24-jul-2026 (lote real de 36
+    // etiquetas, leídas con zxing). El 94% ("iMile") trae el mismo código de
+    // 14 dígitos en QR y en Code128 — Elena puede apuntar a cualquiera de
+    // los dos. Se deja también Code128 de respaldo, igual que ML.
+    // TEMU: se queda con la lista de siempre. No he visto sus etiquetas y
+    // no lo voy a romper por optimizar.
     //   0=QR  3=Code39  5=Code128  6=DataMatrix  9=EAN-13
     const formatos =
       (currentChannel === 'amazon' && currentMode === 'envio') ? [5, 6] :   // Code128 + DataMatrix
       (currentChannel === 'ml'     && currentMode === 'envio') ? [5, 0] :   // Code128 + QR
       (currentChannel === 'tiktok' && currentMode === 'envio') ? [0]    :   // solo QR (IM+14)
+      (currentChannel === 'shein'  && currentMode === 'envio') ? [0, 5] :   // QR + Code128
       [0, 5, 6, 3, 9];
 
     // Ventana angosta (300×120): los códigos de la etiqueta DHL están apilados
     // y muy juntos. Una ventana alta abarca varios a la vez y la cámara agarra
     // el que se le antoja. Angosta, Elena aísla el de arriba y engancha directo.
-    // TikTok es un QR único (cuadrado): con la ventana angosta se ve como
+    // TikTok y SHEIN son QR (cuadrado): con la ventana angosta se ve como
     // "cámara de código de barras" y cuesta encuadrarlo → ventana cuadrada.
     const esTikTok = (currentChannel === 'tiktok' && currentMode === 'envio');
-    const qrbox = esTikTok
+    const esShein  = (currentChannel === 'shein'  && currentMode === 'envio');
+    const qrbox = (esTikTok || esShein)
       ? { width: 250, height: 250 }   // QR cuadrado
       : { width: 300, height: 120 };  // barras apiladas (DHL / Code128)
     // TikTok es un QR único: se lee más rápido con más cuadros por segundo y
     // SIN intentar la versión "espejo" de cada cuadro (disableFlip) — como la
-    // etiqueta nunca va volteada, ese intento extra solo gasta tiempo. Los
-    // demás canales se quedan igual (fps 15, con flip) para no romper nada.
+    // etiqueta nunca va volteada, ese intento extra solo gasta tiempo. SHEIN
+    // se queda con fps 15 y CON flip (no he confirmado que su etiqueta nunca
+    // vaya volteada, así que no le quito ese intento por ahora). Los demás
+    // canales se quedan igual para no romper nada.
     const startCfg = {
       fps: esTikTok ? 24 : 15,
       qrbox: qrbox,

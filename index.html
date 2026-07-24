@@ -518,6 +518,29 @@
       text-align: center;
       color: var(--black);
     }
+    /* ── Avance de Remisión (solo ML y TikTok, solo envío) ─────
+       Aparece en la pantalla de éxito, justo después de subir la
+       foto: cuántas etiquetas de esa remisión ya están "Listo" y
+       cuántas faltan. Se pone en negro cuando ya no falta ninguna. */
+    .remision-progress {
+      width: 100%;
+      padding: 10px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      text-align: center;
+      color: var(--black);
+    }
+    .remision-progress.completa {
+      background: var(--black);
+      color: var(--white);
+      border-color: var(--black);
+    }
   </style>
 </head>
 <body>
@@ -691,6 +714,7 @@
         Foto guardada en Drive ✓
       </p>
     </div>
+    <div class="remision-progress" id="success-remision" style="display:none"></div>
     <div class="session-count" id="success-session-count"></div>
     <button class="btn btn-primary" id="success-scan-btn" onclick="scanAgainSameChannel()">
       Escanear otra guía
@@ -1303,6 +1327,21 @@ async function submitPhoto() {
               ? 'Devolución registrada en el Sheet ✓<br>' + linea
               : 'Estado → Revisada en el Sheet ✓<br>' + linea)
           : 'Estado → Listo en el Sheet ✓<br>' + linea;
+
+      // Avance de Remisión (ML y TikTok, solo envío) — el backend solo lo
+      // manda cuando la etiqueta pertenece a una remisión; si no, se oculta.
+      const remisionEl = document.getElementById('success-remision');
+      if (data.remisionInfo) {
+        const r = data.remisionInfo;
+        remisionEl.textContent = (r.faltan === 0)
+          ? '✔ Remisión ' + r.remision + ' completa (' + r.total + '/' + r.total + ')'
+          : 'Remisión ' + r.remision + ' · ' + r.hechas + ' de ' + r.total + ' · faltan ' + r.faltan;
+        remisionEl.classList.toggle('completa', r.faltan === 0);
+        remisionEl.style.display = 'block';
+      } else {
+        remisionEl.style.display = 'none';
+        remisionEl.classList.remove('completa');
+      }
 
       renderSession();
       clearPhotos();

@@ -929,18 +929,20 @@ async function startScanner() {
     const qrbox = (esTikTok || esShein)
       ? { width: 250, height: 250 }   // QR cuadrado
       : { width: 300, height: 120 };  // barras apiladas (DHL / Code128)
-    // TikTok es un QR único: se lee más rápido con más cuadros por segundo y
-    // SIN intentar la versión "espejo" de cada cuadro (disableFlip) — como la
-    // etiqueta nunca va volteada, ese intento extra solo gasta tiempo. SHEIN
-    // se queda con fps 15 y CON flip (no he confirmado que su etiqueta nunca
-    // vaya volteada, así que no le quito ese intento por ahora). Los demás
-    // canales se quedan igual para no romper nada.
+    // 🚀 Velocidad (28-jul): disableFlip para TODOS los canales, no solo
+    // TikTok. Por cada cuadro de cámara, la librería probaba el cuadro TAL
+    // CUAL y además su versión "espejo" (volteada horizontalmente) — el
+    // doble de intentos de decodificación por cuadro. Ninguna etiqueta física
+    // de ningún canal (Temu, SHEIN, TikTok, ML, Amazon) se imprime ni se pega
+    // volteada — no hay caso real donde el escaneo dependa de esa segunda
+    // pasada. Quitarla en los 5 canales es la misma ganancia que ya se veía
+    // en TikTok, ahora también en Amazon/ML/SHEIN/Temu.
     const startCfg = {
       fps: esTikTok ? 24 : 15,
       qrbox: qrbox,
-      formatsToSupport: formatos
+      formatsToSupport: formatos,
+      disableFlip: true
     };
-    if (esTikTok) startCfg.disableFlip = true;
     await scanner.start(
       { facingMode: 'environment' },
       startCfg,
@@ -1279,20 +1281,29 @@ function renderPhotos() {
   photoBt.textContent  = n ? '📸  Agregar otra foto' : '📸  Tomar foto de evidencia';
 }
 
+// 🚀 Velocidad (28-jul): bajamos el tamaño/calidad de compresión — MAX de
+// 1200px→1000px y calidad JPEG de 0.75→0.65. Esto es evidencia de que el
+// pedido se empacó bien, no una foto de catálogo que necesite verse perfecta,
+// así que aguanta perder un poco de nitidez a cambio de pesar bastante menos.
+// Menos peso = menos tiempo subiéndola desde el celular (sobre todo con wifi
+// floja en el almacén) Y menos tiempo en la subida en paralelo a Drive del
+// lado del servidor. Si alguna vez hace falta más nitidez (por ejemplo, para
+// leer bien un SKU chiquito en la foto), se puede subir MAX y/o la calidad
+// aquí mismo — es el único lugar que hay que tocar.
 function compressImage(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 1200;
+        const MAX = 1000;
         let w = img.width, h = img.height;
         if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.75).split(',')[1]);
+        resolve(canvas.toDataURL('image/jpeg', 0.65).split(',')[1]);
       };
       img.src = e.target.result;
     };

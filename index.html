@@ -357,6 +357,24 @@
     .channel-btn.channel-tiktok { background: var(--black); color: var(--white); outline: 1.5px dashed rgba(255,255,255,.5); outline-offset: -4px; }
     .channel-btn.channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
     .channel-btn.channel-amazon { background: var(--black); color: var(--white); letter-spacing: .08em; }
+    /* 🚀 Combo (30-jul): SHEIN + TikTok en un solo modo — el backend detecta
+       cuál de los dos es solo con la forma del código, así que no hace falta
+       elegir canal ni terminar sesión para alternar entre los dos. */
+    .channel-btn.channel-combo {
+      background: var(--white);
+      color: var(--black);
+      border: 1.5px dashed var(--black);
+      flex-direction: column;
+      gap: 3px;
+    }
+    .channel-btn.channel-combo .combo-sub {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: normal;
+      text-transform: none;
+      opacity: .65;
+    }
     /* ── Scanner ───────────────────────────────────────────── */
     #reader {
       width: 100%;
@@ -588,6 +606,12 @@
     <button class="channel-btn channel-tiktok" onclick="selectChannel('tiktok')">TikTok</button>
     <button class="channel-btn channel-ml"     onclick="selectChannel('ml')">Mercado Libre</button>
     <button class="channel-btn channel-amazon" onclick="selectChannel('amazon')">Amazon</button>
+    <!-- 🚀 Combo (30-jul): solo envío — devolución nunca muestra este botón
+         (se oculta en startFlow()). Detecta SHEIN vs TikTok solo del código. -->
+    <button class="channel-btn channel-combo" id="btn-combo-shein-tiktok" onclick="selectChannel('shein_tiktok')">
+      SHEIN + TikTok
+      <span class="combo-sub">detecta el canal automático</span>
+    </button>
   </div>
 
   <!-- ── SCANNER ───────────────────────────────────────────── -->
@@ -754,6 +778,14 @@ function reemplazarEvidencia() {
 let currentMode      = 'envio';   // 'envio' | 'devolucion'
 let currentCondition = null;      // 'Buen Estado' | 'Merma' — solo devolución
 
+// 🚀 Combo (30-jul): true mientras Elena está en el modo "SHEIN + TikTok".
+// currentChannel SÍ cambia dentro de esta sesión (pasa a 'shein' o 'tiktok'
+// según lo que se detecte en cada escaneo — necesario para el POST y para
+// mostrar el badge correcto), pero esta bandera aparte es la que le dice a
+// la cámara y al GET que sigan en modo "cualquiera de los dos", sin importar
+// cuál fue el último detectado. Se apaga al terminar canal (goHome/cancelScanner).
+let comboSheinTiktok = false;
+
 // Fotos de la etiqueta que se está trabajando AHORA. Elena toma las que
 // necesite (la etiqueta, la caja, el pedido…) antes de enviar.
 let currentPhotos    = [];    // base64 comprimido, lo que se manda al servidor
@@ -812,13 +844,18 @@ function goHome() {
   currentRows      = [];
   currentCondition = null;
   sessionCount     = 0;
+  comboSheinTiktok = false;
   clearPhotos();
   showScreen('screen-home');
   loadCounts();
 }
 
 /* ── Etiqueta del canal activo ─────────────────────────────── */
+// En modo combo se muestra "SHEIN + TikTok" siempre, aunque currentChannel
+// ya haya cambiado al canal real detectado en el último escaneo — así Elena
+// no piensa que la app "cambió sola" a un solo canal.
 function channelName() {
+  if (comboSheinTiktok) return 'SHEIN + TikTok';
   const l = CHANNEL_LABELS[currentChannel];
   return l ? l[0] : '';
 }
@@ -849,6 +886,10 @@ function startFlow() {
     currentMode === 'devolucion'
       ? 'Selecciona el canal<br>de la devolución'
       : 'Selecciona el canal<br>del envío';
+  // 🚀 Combo (30-jul): solo aplica a envío — Devoluciones vive en un Sheet
+  // aparte que todavía requiere canal explícito, así que aquí se esconde.
+  document.getElementById('btn-combo-shein-tiktok').style.display =
+    (currentMode === 'devolucion') ? 'none' : '';
   showScreen('screen-channel-select');
 }
 
@@ -857,8 +898,9 @@ function startFlow() {
 // queda escaneando este canal —etiqueta tras etiqueta— hasta que toque
 // "Terminar {canal}". El contador de sesión empieza en cero.
 function selectChannel(channel) {
-  currentChannel = channel;
-  sessionCount   = 0;
+  comboSheinTiktok = (channel === 'shein_tiktok');
+  currentChannel   = channel;
+  sessionCount     = 0;
   startScanner();
 }
 
@@ -869,7 +911,9 @@ function selectChannel(channel) {
 // en envío y en devolución, para que quede claro en cuál está.
 async function startScanner() {
   const labels = CHANNEL_LABELS[currentChannel] || ['—', ''];
-  document.getElementById('scanner-title').textContent = 'Escanear · ' + labels[0];
+  document.getElementById('scanner-title').textContent = comboSheinTiktok
+    ? 'Escanear · SHEIN + TikTok'
+    : 'Escanear · ' + labels[0];
   document.getElementById('scan-hint-text').textContent =
     currentMode === 'devolucion'
       ? 'Escanea el código\nde la devolución'
@@ -912,7 +956,11 @@ async function startScanner() {
     // TEMU: se queda con la lista de siempre. No he visto sus etiquetas y
     // no lo voy a romper por optimizar.
     //   0=QR  3=Code39  5=Code128  6=DataMatrix  9=EAN-13
-    const formatos =
+    //
+    // 🚀 Combo (30-jul): SHEIN + TikTok al mismo tiempo. TikTok es solo-QR y
+    // SHEIN es QR+Code128 — con [0, 5] (el mismo formato de SHEIN) se leen
+    // los dos sin problema, apunte Elena a cualquiera de las dos etiquetas.
+    const formatos = comboSheinTiktok ? [0, 5] :
       (currentChannel === 'amazon' && currentMode === 'envio') ? [5, 6] :   // Code128 + DataMatrix
       (currentChannel === 'ml'     && currentMode === 'envio') ? [5, 0] :   // Code128 + QR
       (currentChannel === 'tiktok' && currentMode === 'envio') ? [0]    :   // solo QR (IM+14)
@@ -926,7 +974,7 @@ async function startScanner() {
     // "cámara de código de barras" y cuesta encuadrarlo → ventana cuadrada.
     const esTikTok = (currentChannel === 'tiktok' && currentMode === 'envio');
     const esShein  = (currentChannel === 'shein'  && currentMode === 'envio');
-    const qrbox = (esTikTok || esShein)
+    const qrbox = (comboSheinTiktok || esTikTok || esShein)
       ? { width: 250, height: 250 }   // QR cuadrado
       : { width: 300, height: 120 };  // barras apiladas (DHL / Code128)
     // 🚀 Velocidad (28-jul): disableFlip para TODOS los canales, no solo
@@ -938,7 +986,7 @@ async function startScanner() {
     // pasada. Quitarla en los 5 canales es la misma ganancia que ya se veía
     // en TikTok, ahora también en Amazon/ML/SHEIN/Temu.
     const startCfg = {
-      fps: esTikTok ? 24 : 15,
+      fps: (comboSheinTiktok || esTikTok) ? 24 : 15,
       qrbox: qrbox,
       formatsToSupport: formatos,
       disableFlip: true
@@ -974,6 +1022,7 @@ async function stopScanner() {
 
 function cancelScanner() {
   stopScanner();
+  comboSheinTiktok = false;
   showScreen('screen-channel-select'); // salida deliberada: permite cambiar de canal
 }
 
@@ -1061,10 +1110,15 @@ async function onScanSuccess(raw) {
   showScreen('screen-loading');
 
   try {
-    // Construir URL — siempre enviar el canal seleccionado
-    let url = APPS_SCRIPT_URL
-      + '?tracking=' + encodeURIComponent(tracking)
-      + '&channel='  + encodeURIComponent(currentChannel);
+    // Construir URL.
+    // 🚀 Combo (30-jul): en modo "SHEIN + TikTok" NO se manda el canal —
+    // así el backend usa su propio detectChannel() (ya existía, dormido)
+    // para adivinarlo solo con la forma del código. En cualquier otro modo
+    // se sigue mandando el canal fijo, como siempre.
+    let url = APPS_SCRIPT_URL + '?tracking=' + encodeURIComponent(tracking);
+    if (!comboSheinTiktok) {
+      url += '&channel=' + encodeURIComponent(currentChannel);
+    }
     if (currentMode === 'devolucion') {
       url += '&mode=devolucion';
     }

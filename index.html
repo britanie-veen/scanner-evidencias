@@ -1093,7 +1093,13 @@ function setCondition(value) {
 //
 // Cualquier otro código se regresa igual — los demás canales no se tocan.
 function limpiarCodigo(raw) {
-  const txt = String(raw || '').trim();
+  // Defensa (11-ago): algunos DataMatrix de paquetería vienen en formato GS1
+  // y pueden traer caracteres de control invisibles (separadores FNC1, bytes
+  // sueltos) si la cámara los decodifica de forma imperfecta. Se limpian ANTES
+  // de intentar el match — si no se quitan, pueden colarse en la URL de
+  // búsqueda y romper el fetch() con un error críptico ("The string did not
+  // match the expected pattern"), sin que se vea nada raro en pantalla.
+  const txt = String(raw || '').replace(/[\x00-\x1F\x7F]/g, '').trim();
   const m   = txt.match(/^S([A-Za-z][A-Za-z0-9]{8})(?:_.*)?$/);
   return m ? m[1] : txt;
 }
@@ -1169,7 +1175,21 @@ async function onScanSuccess(raw) {
       url += '&mode=devolucion';
     }
 
-    const res  = await fetch(url, { redirect: 'follow' });
+    // 🔴 Corregido (11-ago): antes el fetch no tenía límite de tiempo — si
+    // Apps Script arrancaba "en frío" (o cualquier otra cosa lo dejaba
+    // pensando), la pantalla de carga se quedaba pegada indefinidamente sin
+    // avisar nada, hasta que algo tronaba con un error críptico. Con
+    // AbortController se le pone un tope de 20s: si no contesta a tiempo, se
+    // cancela solo y se avisa claro para que Elena/Edwin puedan reintentar de
+    // inmediato en vez de quedarse esperando sin saber qué pasa.
+    const timeoutCtrl = new AbortController();
+    const timeoutId = setTimeout(function () { timeoutCtrl.abort(); }, 20000);
+    let res;
+    try {
+      res = await fetch(url, { redirect: 'follow', signal: timeoutCtrl.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     const data = await res.json();
 
     if (data.error) {
@@ -1313,7 +1333,10 @@ async function onScanSuccess(raw) {
     }
 
   } catch (err) {
-    alert('Error de conexión:\n' + err.message);
+    const mensaje = (err.name === 'AbortError')
+      ? 'Tardó demasiado en contestar (más de 20s).\nIntenta de nuevo.'
+      : err.message;
+    alert('Error de conexión:\n' + mensaje);
     scanAgainSameChannel(); // se queda en el mismo canal, no obliga a reseleccionar
   }
 }

@@ -1027,8 +1027,19 @@ async function startScanner() {
     // adentro) — así se le pide al navegador el video en la resolución más
     // alta posible; si el celular no la soporta, el navegador cae solo a la
     // más cercana que sí tenga (ideal, no exact).
+    // 🔴 Corregido (11-ago): fps a 24 en TODOS los canales, no solo TikTok.
+    // Se había dejado en 15 para el resto "por si acaso", pero con
+    // disableFlip ya activo en los 5 canales (ver arriba, 28-jul) cada
+    // cuadro cuesta la mitad de lo que costaba antes — hay margen de sobra
+    // para subir el muestreo sin pagar más CPU/batería de lo que ya se paga.
+    // Más cuadros por segundo = más oportunidades de enganchar el código
+    // correcto por segundo, sobre todo en Amazon: la etiqueta DHL trae VARIOS
+    // códigos Code128 juntos (la referencia buena Y el tracking de DHL, con
+    // el MISMO formato — el formatsToSupport no los puede distinguir, solo
+    // la puntería dentro de la ventana angosta), así que cuantos más intentos
+    // por segundo, más rápido cae el bueno en cuanto Elena apunte bien.
     const startCfg = {
-      fps: (comboSheinTiktok || esTikTok) ? 24 : 15,
+      fps: 24,
       qrbox: qrbox,
       disableFlip: true,
       videoConstraints: {

@@ -1202,21 +1202,33 @@ async function onScanSuccess(raw) {
       url += '&mode=devolucion';
     }
 
-    // 🔴 Corregido (11-ago): antes el fetch no tenía límite de tiempo — si
-    // Apps Script arrancaba "en frío" (o cualquier otra cosa lo dejaba
-    // pensando), la pantalla de carga se quedaba pegada indefinidamente sin
-    // avisar nada, hasta que algo tronaba con un error críptico. Con
-    // AbortController se le pone un tope de 20s: si no contesta a tiempo, se
-    // cancela solo y se avisa claro para que Elena/Edwin puedan reintentar de
-    // inmediato en vez de quedarse esperando sin saber qué pasa.
-    const timeoutCtrl = new AbortController();
-    const timeoutId = setTimeout(function () { timeoutCtrl.abort(); }, 20000);
-    let res;
-    try {
-      res = await fetch(url, { redirect: 'follow', signal: timeoutCtrl.signal });
-    } finally {
-      clearTimeout(timeoutId);
+    // 🔴 Corregido (11-ago): el servidor SIEMPRE contesta rápido cuando la
+    // petición le llega (confirmado con ?action=lastget: 4 de 4 pruebas
+    // reales, todas por debajo de 2s) — el problema es que a veces la
+    // petición no llega a tiempo por la red del celular en ese momento
+    // (WiFi flojo/intermitente del almacén). Antes, si se caía un intento,
+    // había que volver a escanear la etiqueta a mano. Ahora se reintenta
+    // SOLO, hasta 2 veces (15s de tope cada intento — 30s en el peor caso,
+    // menos que antes), sin que Elena/Edwin tengan que hacer nada.
+    const MAX_INTENTOS = 2;
+    let res, ultimoErrorFetch;
+    for (let intento = 1; intento <= MAX_INTENTOS; intento++) {
+      const timeoutCtrl = new AbortController();
+      const timeoutId = setTimeout(function () { timeoutCtrl.abort(); }, 15000);
+      try {
+        res = await fetch(url, { redirect: 'follow', signal: timeoutCtrl.signal });
+        ultimoErrorFetch = null;
+        break; // éxito, no hace falta reintentar
+      } catch (errFetch) {
+        ultimoErrorFetch = errFetch;
+        if (intento < MAX_INTENTOS) {
+          loadingSubtitleEl.textContent = 'Se cayó la conexión, reintentando (' + (intento + 1) + '/' + MAX_INTENTOS + ')...';
+        }
+      } finally {
+        clearTimeout(timeoutId);
+      }
     }
+    if (ultimoErrorFetch) throw ultimoErrorFetch;
     const data = await res.json();
 
     if (data.error) {
@@ -1361,7 +1373,7 @@ async function onScanSuccess(raw) {
 
   } catch (err) {
     const mensaje = (err.name === 'AbortError')
-      ? 'Tardó demasiado en contestar (más de 20s).\nIntenta de nuevo.'
+      ? 'No hubo conexión después de 2 intentos.\nRevisa el WiFi/datos e intenta de nuevo.'
       : err.message;
     alert('Error de conexión:\n' + mensaje);
     scanAgainSameChannel(); // se queda en el mismo canal, no obliga a reseleccionar

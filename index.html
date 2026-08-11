@@ -630,7 +630,7 @@
   <!-- ── LOADING ───────────────────────────────────────────── -->
   <div id="screen-loading" class="screen">
     <div class="spinner"></div>
-    <p class="subtitle">Buscando en el Sheet...</p>
+    <p class="subtitle" id="loading-subtitle">Buscando en el Sheet...</p>
   </div>
 
   <!-- ── FOUND ─────────────────────────────────────────────── -->
@@ -1172,6 +1172,22 @@ async function onScanSuccess(raw) {
   currentTracking = tracking;
   showScreen('screen-loading');
 
+  // ⏱ Contador visible (11-ago): ?action=lastget mide el tiempo DEL SERVIDOR
+  // (abrir Sheet + buscar + leer), pero NO el viaje de ida y vuelta por la
+  // red del celular — que es justo lo que un WiFi flojo del almacén puede
+  // inflar sin que el servidor se entere de nada (esas búsquedas SÍ están
+  // saliendo rápido del lado de Apps Script, confirmado con datos reales).
+  // Con el contador en pantalla, cualquiera puede decir "se quedó pegado en
+  // 9 segundos" con solo ver el celular, sin tener que abrir ninguna URL de
+  // diagnóstico — así sabemos de una vez si el tiempo se va en la red o en
+  // otra parte.
+  const loadingStart = Date.now();
+  const loadingSubtitleEl = document.getElementById('loading-subtitle');
+  const loadingTimer = setInterval(function () {
+    const segundos = Math.floor((Date.now() - loadingStart) / 1000);
+    loadingSubtitleEl.textContent = 'Buscando en el Sheet... (' + segundos + 's)';
+  }, 1000);
+
   try {
     // Construir URL.
     // 🚀 Combo (30-jul): en modo "SHEIN + TikTok" NO se manda el canal —
@@ -1349,6 +1365,9 @@ async function onScanSuccess(raw) {
       : err.message;
     alert('Error de conexión:\n' + mensaje);
     scanAgainSameChannel(); // se queda en el mismo canal, no obliga a reseleccionar
+  } finally {
+    clearInterval(loadingTimer);
+    loadingSubtitleEl.textContent = 'Buscando en el Sheet...'; // reset para el siguiente escaneo
   }
 }
 

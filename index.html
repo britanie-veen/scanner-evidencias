@@ -1274,12 +1274,27 @@ async function onScanSuccess(raw) {
         newBanner.style.display = 'block';
         document.getElementById('found-card').style.opacity = '0.4';
         document.getElementById('found-title').textContent  = 'Nueva devolución';
-        document.getElementById('info-sku').textContent     = '—';
-        document.getElementById('info-qty').textContent     = '—';
-        document.getElementById('info-pedido').textContent  = '—';
+
+        // Cruce con envío: si encontramos el mismo tracking en el sheet de
+        // ventas, mostramos SKU/Cantidad/Pedido/Remisión de ahí en vez de
+        // dejarlos en blanco. Es solo informativo — el registro sigue
+        // siendo nuevo en devoluciones (currentRow = 0).
+        const envioData = data.envioData || null;
+        document.getElementById('info-sku').textContent    =
+          (envioData && envioData.sku) ? envioData.sku : '—';
+        document.getElementById('info-qty').textContent    =
+          (envioData && envioData.qty !== undefined && envioData.qty !== null && envioData.qty !== '')
+            ? (envioData.qty + ' pz') : '—';
+        document.getElementById('info-pedido').textContent =
+          (envioData && envioData.pedido) ? envioData.pedido : '—';
         document.getElementById('info-status').textContent  = 'Pendiente';
         document.getElementById('info-status').className    = 'status-badge status-proceso';
-        rowRemision.style.display = 'none';
+        if (envioData && envioData.remision) {
+          rowRemision.style.display = 'flex';
+          document.getElementById('info-remision').textContent = envioData.remision;
+        } else {
+          rowRemision.style.display = 'none';
+        }
       } else {
         newBanner.style.display = 'none';
         document.getElementById('found-card').style.opacity = '1';
@@ -1349,12 +1364,13 @@ async function onScanSuccess(raw) {
         modeIndicator.classList.remove('devolucion');
       }
 
-      // Selector de condición (Buen Estado / Merma) — pendiente, se activa
-      // junto con las fotos de catálogo. El HTML/CSS ya está listo, solo
-      // falta mostrarlo (cambiar 'none' por 'flex' en modo devolución) y
-      // mandar currentCondition en submitPhoto cuando se retome.
+      // Selector de condición (Buen Estado / Merma) — SOLO en modo
+      // devolución. En envío se queda oculto, tal como antes.
       currentCondition = null;
-      document.getElementById('condition-toggle').style.display = 'none';
+      document.getElementById('cond-bueno').classList.remove('active');
+      document.getElementById('cond-merma').classList.remove('active');
+      document.getElementById('condition-toggle').style.display =
+        (currentMode === 'devolucion') ? 'flex' : 'none';
 
       // Fotos: empezamos de cero para cada etiqueta nueva
       clearPhotos();
@@ -1480,18 +1496,24 @@ function compressImage(file) {
 async function submitPhoto() {
   const n = currentPhotos.length;
   if (!n) { alert('Primero toma al menos una foto.'); return; }
+  // En devolución es obligatorio elegir Buen Estado o Merma antes de enviar.
+  if (currentMode === 'devolucion' && !currentCondition) {
+    alert('Selecciona si el producto llegó en Buen Estado o en Merma antes de enviar.');
+    return;
+  }
 
   document.getElementById('uploading-subtitle').textContent =
     n === 1 ? 'Subiendo evidencia a Drive...' : 'Subiendo ' + n + ' fotos a Drive...';
   showScreen('screen-uploading');
 
   const payload = JSON.stringify({
-    tracking: currentTracking,
-    channel:  currentChannel,
-    row:      currentRow,     // 0 = nueva entrada en devolución
-    rows:     currentRows,    // todas las filas del paquete (Pack de ML)
-    photos:   currentPhotos,  // todas las fotos de esta etiqueta
-    mode:     currentMode
+    tracking:  currentTracking,
+    channel:   currentChannel,
+    row:       currentRow,     // 0 = nueva entrada en devolución
+    rows:      currentRows,    // todas las filas del paquete (Pack de ML)
+    photos:    currentPhotos,  // todas las fotos de esta etiqueta
+    mode:      currentMode,
+    condition: currentMode === 'devolucion' ? currentCondition : ''  // 'Buen Estado' | 'Merma' — solo devolución
   });
 
   try {

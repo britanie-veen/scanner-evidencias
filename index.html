@@ -767,6 +767,10 @@ let currentTracking  = null;
 let currentChannel   = null;   // canal activo (se queda fijo durante toda la sesión)
 let currentRow       = null;   // fila en el Sheet (0 = nueva entrada en devolución)
 let currentRows      = [];     // TODAS las filas del paquete (un Pack de ML = varios SKUs)
+let currentEnvioData = null;   // 🆕 (13-ago): SKU/Cantidad/Pedido/Remisión cruzados con
+                                // Ventas para una "Nueva devolución" — se guarda aquí para
+                                // poder mandarlo también en el POST y que quede escrito en
+                                // el Sheet de devoluciones, no solo mostrado en pantalla.
 let yaTieneFotos     = 0;      // evidencias que ESTA etiqueta ya tenía guardadas
 
 // Elena decidió reemplazar la evidencia anterior: se quita el aviso y aparece
@@ -845,6 +849,7 @@ function goHome() {
   currentRow       = null;
   currentRows      = [];
   currentCondition = null;
+  currentEnvioData = null;
   sessionCount     = 0;
   comboSheinTiktok = false;
   clearPhotos();
@@ -1068,6 +1073,7 @@ function scanAgainSameChannel() {
   currentRow       = null;
   currentRows      = [];
   currentCondition = null;
+  currentEnvioData = null;
   scanning         = false;
   clearPhotos();
   startScanner();
@@ -1280,6 +1286,7 @@ async function onScanSuccess(raw) {
         // dejarlos en blanco. Es solo informativo — el registro sigue
         // siendo nuevo en devoluciones (currentRow = 0).
         const envioData = data.envioData || null;
+        currentEnvioData = envioData;   // 🆕 (13-ago): se manda también en el POST al guardar
         document.getElementById('info-sku').textContent    =
           (envioData && envioData.sku) ? envioData.sku : '—';
         document.getElementById('info-qty').textContent    =
@@ -1303,6 +1310,7 @@ async function onScanSuccess(raw) {
         document.getElementById('ya-banner').style.display = 'none';
         document.getElementById('photo-btn').style.display = '';
       } else {
+        currentEnvioData = null;   // ya es un registro EXISTENTE, no un cruce con Ventas
         newBanner.style.display = 'none';
         document.getElementById('found-card').style.opacity = '1';
         document.getElementById('found-title').textContent  = 'Pedido encontrado';
@@ -1520,7 +1528,11 @@ async function submitPhoto() {
     rows:      currentRows,    // todas las filas del paquete (Pack de ML)
     photos:    currentPhotos,  // todas las fotos de esta etiqueta
     mode:      currentMode,
-    condition: currentMode === 'devolucion' ? currentCondition : ''  // 'Buen Estado' | 'Merma' — solo devolución
+    condition: currentMode === 'devolucion' ? currentCondition : '',  // 'Buen Estado' | 'Merma' — solo devolución
+    // 🆕 (13-ago): SKU/Cantidad/Pedido/Remisión ya cruzados con Ventas (solo
+    // aplica cuando currentRow === 0, o sea "Nueva devolución") — así el
+    // backend los guarda en el Sheet en vez de dejarlos en blanco.
+    envioData: (currentMode === 'devolucion' && currentRow === 0) ? currentEnvioData : null
   });
 
   try {

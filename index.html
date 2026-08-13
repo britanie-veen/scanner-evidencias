@@ -1295,6 +1295,13 @@ async function onScanSuccess(raw) {
         } else {
           rowRemision.style.display = 'none';
         }
+
+        // Es un registro NUEVO — nunca puede tener fotos previas todavía.
+        // Sin esto, el aviso de "ya tomaste foto" se quedaba pegado en
+        // pantalla si el escaneo ANTERIOR (de otra etiqueta) sí las tenía.
+        yaTieneFotos = 0;
+        document.getElementById('ya-banner').style.display = 'none';
+        document.getElementById('photo-btn').style.display = '';
       } else {
         newBanner.style.display = 'none';
         document.getElementById('found-card').style.opacity = '1';

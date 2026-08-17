@@ -590,6 +590,12 @@
     <button class="btn btn-primary" onclick="startFlow()">
       Escanear guía
     </button>
+    <!-- 🆕 (17-ago): acceso directo a la pantalla de Tráfico (trafico.html)
+         desde el Scanner principal — así queda todo conectado en un solo
+         lugar, sin tocar nada del flujo de envío/devolución de aquí arriba. -->
+    <button class="btn btn-secondary" onclick="window.location.href = 'trafico.html'">
+      📦&nbsp; Tráfico — marcar entregados
+    </button>
   </div>
 
   <!-- ── SELECCIÓN DE CANAL (envío y devolución) ─────────── -->
@@ -816,6 +822,14 @@ function reemplazarEvidencia() {
 let currentMode      = 'envio';   // 'envio' | 'devolucion'
 let currentCondition = null;      // 'Buen Estado' | 'Merma' — solo devolución
 
+// 🆕 (17-ago): temporizador del auto-avance en ENVÍO (ver submitPhoto()).
+// Se cancela si la persona sale manualmente (Terminar canal / Escanear
+// otra) antes de que se cumpla, para que nunca se dispare dos veces.
+let autoAdvanceTimer = null;
+function cancelAutoAdvance() {
+  if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+}
+
 // 🚀 Combo (30-jul): true mientras Elena está en el modo "SHEIN + TikTok".
 // currentChannel SÍ cambia dentro de esta sesión (pasa a 'shein' o 'tiktok'
 // según lo que se detecte en cada escaneo — necesario para el POST y para
@@ -874,6 +888,7 @@ function showScreen(id) {
 // Home — mientras Elena esté vaciando Amazon, la app nunca la manda sola
 // de regreso al menú.
 function goHome() {
+  cancelAutoAdvance();
   stopScanner();
   scanning         = false;
   currentTracking  = null;
@@ -1106,6 +1121,7 @@ async function startScanner() {
 // escaneo exitoso, un "no encontrado", o un error, para no forzar a
 // reseleccionar canal cada vez.
 function scanAgainSameChannel() {
+  cancelAutoAdvance();
   currentTracking  = null;
   currentRow       = null;
   currentRows      = [];
@@ -1121,6 +1137,7 @@ async function stopScanner() {
 }
 
 function cancelScanner() {
+  cancelAutoAdvance();
   stopScanner();
   comboSheinTiktok = false;
   showScreen('screen-channel-select'); // salida deliberada: permite cambiar de canal
@@ -1728,6 +1745,21 @@ async function submitPhoto() {
       renderSession();
       clearPhotos();
       showScreen('screen-success');
+
+      // 🆕 (17-ago): en ENVÍO ya no hace falta tocar "Escanear otra guía" —
+      // se ve el check de "Listo" un momento y solas avanza a la siguiente
+      // etiqueta, para ahorrar toques cuando hay mucho volumen. Los botones
+      // "Escanear otra guía" / "Terminar canal" se quedan visibles por si
+      // se necesita salir antes de que se cumpla el tiempo. En DEVOLUCIÓN
+      // no se toca nada — se queda igual que siempre (hay más pasos de por
+      // medio, como Merma, que sí conviene confirmar a mano).
+      if (currentMode === 'envio') {
+        cancelAutoAdvance();
+        autoAdvanceTimer = setTimeout(function () {
+          autoAdvanceTimer = null;
+          scanAgainSameChannel();
+        }, 900);
+      }
     } else {
       throw new Error(data.error || 'Error en el servidor');
     }

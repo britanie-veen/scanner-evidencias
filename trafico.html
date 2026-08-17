@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tráfico · CeroCero</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --black:   #0D0D0D;
+    --white:   #FFFFFF;
+    --surface: #F5F5F5;
+    --border:  #E8E8E8;
+    --muted:   #999999;
+  }
+  body {
+    font-family: 'Montserrat', -apple-system, sans-serif;
+    background: var(--white);
+    color: var(--black);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #app {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 48px 24px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .brand {
+    font-size: 14px;
+    font-weight: 200;
+    color: var(--muted);
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-size: clamp(34px, 8vw, 46px);
+    font-weight: 900;
+    letter-spacing: -.02em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1;
+    margin-bottom: 14px;
+  }
+  .subtitle {
+    font-size: 14px;
+    font-weight: 200;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.7;
+    letter-spacing: .02em;
+    margin-bottom: 36px;
+  }
+  /* ── Input donde "escribe" la pistola — se deja visible y con foco
+       marcado, para que Tráfico vea siempre si está lista para el
+       siguiente escaneo. ── */
+  #scan-input {
+    width: 100%;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-align: center;
+    padding: 18px;
+    border-radius: 2px;
+    border: 1.5px solid var(--black);
+    background: var(--white);
+    color: var(--black);
+    outline: none;
+  }
+  #scan-input::placeholder { color: var(--muted); font-weight: 200; }
+  #scan-input:focus { background: var(--surface); }
+  #scan-input:disabled { opacity: .4; }
+
+  .result-card {
+    margin-top: 28px;
+    width: 100%;
+    min-height: 180px;
+    border-radius: 4px;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .result-card.ok,
+  .result-card.notfound {
+    background: var(--black);
+    color: var(--white);
+    border-color: var(--black);
+  }
+  .result-card.error {
+    background: var(--white);
+    border: 1.5px dashed var(--black);
+  }
+  .state-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: var(--white);
+    font-weight: 900;
+    margin-bottom: 14px;
+  }
+  .result-card.ok .state-icon,
+  .result-card.notfound .state-icon {
+    background: var(--white);
+    color: var(--black);
+  }
+  .result-title {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -.01em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .result-code {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    padding: 8px 16px;
+    border-radius: 2px;
+    background: rgba(0,0,0,.06);
+    word-break: break-all;
+  }
+  .result-card.ok .result-code,
+  .result-card.notfound .result-code { background: rgba(255,255,255,.12); }
+  .result-detail {
+    font-size: 11px;
+    font-weight: 200;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+  .result-card.ok .result-detail,
+  .result-card.notfound .result-detail { color: rgba(255,255,255,.6); }
+  .channel-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 20px;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-top: 14px;
+    border-radius: 2px;
+    background: var(--white);
+    color: var(--black);
+  }
+  .result-card.ok .channel-badge,
+  .result-card.notfound .channel-badge { background: rgba(255,255,255,.14); color: var(--white); }
+  .placeholder {
+    font-size: 12px;
+    font-weight: 200;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <p class="brand">CeroCero</p>
+  <h1>Tráfico</h1>
+  <p class="subtitle">Conecta tu pistola/escáner a esta computadora<br>y escanea el código de cada paquete.</p>
+
+  <input type="text" id="scan-input" autocomplete="off" autofocus placeholder="ESPERANDO ESCANEO...">
+
+  <div class="result-card" id="result-card">
+    <p class="placeholder">Aquí va apareciendo cada paquete escaneado</p>
+  </div>
+</div>
+
+<script>
+// URL fija: la MISMA que usa el escáner principal (index.html) — este
+// deployment ya sirve tanto envío como devolución como esta pantalla de
+// tráfico, todo a través de action= en doGet. No se toca nada del flujo
+// existente: esta pantalla solo llama a ?action=marcarEntregado, una
+// acción nueva y aislada.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyt2_OBXDiGStpeyTAkQGBAG_wWGI_GP24swuGLcAI1S9LnCWwEmhPHQul2CGsDw/exec';
+
+const CHANNEL_LABELS = {
+  temu:   'TEMU',
+  shein:  'SHEIN',
+  tiktok: 'TIKTOK',
+  ml:     'ML',
+  amazon: 'AMAZON'
+};
+
+const input = document.getElementById('scan-input');
+const card  = document.getElementById('result-card');
+let procesando = false;
+
+function focusInput() {
+  if (!input.disabled) input.focus();
+}
+window.addEventListener('load', focusInput);
+document.addEventListener('click', focusInput);
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) focusInput();
+});
+
+// Misma limpieza que ya usa el escáner principal — por si la pistola
+// llega a leer alguna etiqueta con el prefijo "S..." de SHEIN.
+function limpiarCodigo(raw) {
+  const txt = String(raw || '').replace(/[\x00-\x1F\x7F]/g, '').trim();
+  const m = txt.match(/^S([A-Za-z][A-Za-z0-9]{8})(?:_.*)?$/);
+  return m ? m[1] : txt;
+}
+
+function mostrarCargando(codigo) {
+  card.className = 'result-card';
+  card.innerHTML =
+    '<div class="state-icon">…</div>' +
+    '<div class="result-title">Buscando</div>' +
+    '<div class="result-code">' + codigo + '</div>';
+}
+
+function mostrarOk(data) {
+  const nombreCanal = CHANNEL_LABELS[data.channel] || data.channel || '—';
+  card.className = 'result-card ok';
+  card.innerHTML =
+    '<div class="state-icon">✓</div>' +
+    '<div class="result-title">Entregado</div>' +
+    '<div class="result-code">' + data.tracking + '</div>' +
+    '<div class="result-detail">' + data.filas + (data.filas === 1 ? ' fila marcada' : ' filas marcadas') + '</div>' +
+    '<span class="channel-badge">' + nombreCanal + '</span>';
+}
+
+function mostrarNoEncontrado(data) {
+  const nombreCanal = CHANNEL_LABELS[data.channel] || data.channel || '—';
+  card.className = 'result-card notfound';
+  card.innerHTML =
+    '<div class="state-icon">✗</div>' +
+    '<div class="result-title">No encontrado en Ventas</div>' +
+    '<div class="result-code">' + data.tracking + '</div>' +
+    '<span class="channel-badge">' + nombreCanal + '</span>';
+}
+
+function mostrarError(mensaje, codigo) {
+  card.className = 'result-card error';
+  card.innerHTML =
+    '<div class="state-icon">!</div>' +
+    '<div class="result-title">Error</div>' +
+    (codigo ? '<div class="result-code">' + codigo + '</div>' : '') +
+    '<div class="result-detail">' + mensaje + '</div>';
+}
+
+async function procesarEscaneo(codigoCrudo) {
+  const codigo = limpiarCodigo(codigoCrudo);
+  if (!codigo || procesando) return;
+  procesando = true;
+  input.disabled = true;
+  mostrarCargando(codigo);
+  try {
+    const url = APPS_SCRIPT_URL + '?action=marcarEntregado&tracking=' + encodeURIComponent(codigo);
+    const res = await fetch(url, { redirect: 'follow' });
+    const data = await res.json();
+    if (data.error) {
+      mostrarError(data.error, codigo);
+    } else if (!data.found) {
+      mostrarNoEncontrado(data);
+    } else {
+      mostrarOk(data);
+    }
+  } catch (err) {
+    mostrarError('Error de conexión: ' + err.message, codigo);
+  } finally {
+    procesando = false;
+    input.disabled = false;
+    input.value = '';
+    focusInput();
+  }
+}
+
+input.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const codigo = input.value.trim();
+  input.value = '';
+  if (codigo) procesarEscaneo(codigo);
+});
+</script>
+</body>
+</html>

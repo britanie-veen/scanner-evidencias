@@ -910,6 +910,11 @@ function goHome() {
 // no piensa que la app "cambió sola" a un solo canal.
 function channelName() {
   if (comboSheinTiktok) return 'SHEIN + TikTok';
+  // 🆕 (17-ago): Devolución ya no fija canal — cada escaneo puede ser
+  // cualquiera de los 5, así que el título siempre dice "Devolución" en
+  // vez del último canal detectado (igual de espíritu que el combo de
+  // arriba). Solo aplica a devolución — envío sigue mostrando su canal.
+  if (currentMode === 'devolucion') return 'Devolución';
   const l = CHANNEL_LABELS[currentChannel];
   return l ? l[0] : '';
 }
@@ -935,15 +940,20 @@ function renderSession() {
 /* ── Inicio de flujo ───────────────────────────────────────── */
 // Ambos modos muestran el selector de canal antes de escanear.
 function startFlow() {
-  currentChannel = null;
-  document.getElementById('channel-select-subtitle').innerHTML =
-    currentMode === 'devolucion'
-      ? 'Selecciona el canal<br>de la devolución'
-      : 'Selecciona el canal<br>del envío';
-  // 🚀 Combo (30-jul): solo aplica a envío — Devoluciones vive en un Sheet
-  // aparte que todavía requiere canal explícito, así que aquí se esconde.
-  document.getElementById('btn-combo-shein-tiktok').style.display =
-    (currentMode === 'devolucion') ? 'none' : '';
+  currentChannel   = null;
+  comboSheinTiktok = false;
+  sessionCount     = 0;
+  // 🆕 (17-ago): Devolución ya no elige canal — entra directo a la cámara.
+  // El backend detecta el canal solo con la forma del código (o, si la
+  // cámara no puede leerlo, con los últimos 6 dígitos buscando en los 5
+  // canales a la vez). ENVÍO NO SE TOCA: sigue yendo a screen-channel-select
+  // exactamente como siempre.
+  if (currentMode === 'devolucion') {
+    startScanner();
+    return;
+  }
+  document.getElementById('channel-select-subtitle').innerHTML = 'Selecciona el canal<br>del envío';
+  document.getElementById('btn-combo-shein-tiktok').style.display = '';
   showScreen('screen-channel-select');
 }
 
@@ -964,10 +974,10 @@ function selectChannel(channel) {
 // después de cada escaneo. El título siempre muestra el canal activo,
 // en envío y en devolución, para que quede claro en cuál está.
 async function startScanner() {
-  const labels = CHANNEL_LABELS[currentChannel] || ['—', ''];
-  document.getElementById('scanner-title').textContent = comboSheinTiktok
-    ? 'Escanear · SHEIN + TikTok'
-    : 'Escanear · ' + labels[0];
+  // 🆕 (17-ago): usa channelName() (ya trae el caso de Devolución/combo)
+  // en vez de repetir la lógica aquí — mismo resultado que antes para
+  // Envío, letra por letra.
+  document.getElementById('scanner-title').textContent = 'Escanear · ' + channelName();
   document.getElementById('scan-hint-text').textContent =
     currentMode === 'devolucion'
       ? 'Escanea el código\nde la devolución'
@@ -1140,6 +1150,14 @@ function cancelScanner() {
   cancelAutoAdvance();
   stopScanner();
   comboSheinTiktok = false;
+  // 🆕 (17-ago): Devolución ya no tiene pantalla de "elegir canal" a la
+  // que regresar — el botón de atrás va directo a Home. Envío no se
+  // toca: sigue yendo a screen-channel-select como siempre.
+  if (currentMode === 'devolucion') {
+    showScreen('screen-home');
+    loadCounts();
+    return;
+  }
   showScreen('screen-channel-select'); // salida deliberada: permite cambiar de canal
 }
 
@@ -1253,9 +1271,11 @@ async function onScanSuccess(raw) {
     // 🚀 Combo (30-jul): en modo "SHEIN + TikTok" NO se manda el canal —
     // así el backend usa su propio detectChannel() (ya existía, dormido)
     // para adivinarlo solo con la forma del código. En cualquier otro modo
-    // se sigue mandando el canal fijo, como siempre.
+    // de ENVÍO se sigue mandando el canal fijo, como siempre (sin tocar).
+    // 🆕 (17-ago): en DEVOLUCIÓN tampoco se manda canal nunca — el backend
+    // lo detecta solo en cada escaneo (puede venir de cualquiera de los 5).
     let url = APPS_SCRIPT_URL + '?tracking=' + encodeURIComponent(tracking);
-    if (!comboSheinTiktok) {
+    if (!comboSheinTiktok && currentMode !== 'devolucion') {
       url += '&channel=' + encodeURIComponent(currentChannel);
     }
     if (currentMode === 'devolucion') {
@@ -1510,9 +1530,15 @@ async function buscarManual() {
 async function buscarPorSufijoManual(sufijo) {
   showScreen('screen-loading');
   try {
-    const url = APPS_SCRIPT_URL + '?tracking=' + encodeURIComponent(sufijo) +
-                '&channel=' + encodeURIComponent(currentChannel) +
+    // 🆕 (17-ago): esta función SOLO se usa en Devolución (nunca en
+    // Envío). Ya no se manda "channel" si todavía no se conoce (la
+    // cámara no pudo leer nada) — el backend busca en los 5 canales a
+    // la vez. Si currentChannel ya quedó puesto (por ejemplo, de un
+    // escaneo anterior en esta misma sesión), sí se manda, sin cambiar
+    // ese caso.
+    let url = APPS_SCRIPT_URL + '?tracking=' + encodeURIComponent(sufijo) +
                 '&mode=devolucion&manual=1';
+    if (currentChannel) url += '&channel=' + encodeURIComponent(currentChannel);
     const res = await fetch(url, { redirect: 'follow' });
     const data = await res.json();
 

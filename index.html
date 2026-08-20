@@ -718,6 +718,15 @@
     </div>
     <!-- Foto de catálogo del producto (solo si existe foto para el SKU en Drive) -->
     <img class="catalog-photo" id="info-catalog-photo" alt="Foto del producto" style="display:none">
+    <!-- 🆕 (20-ago): SOLO envío — cámara en vivo, ABIERTA directo al
+         encontrar la etiqueta (ver abrirCamaraViva(), llamada desde
+         onScanSuccess). Cada toque en "Tomar foto" (más abajo,
+         capturarFotoEnvioViva()) saca una foto de este mismo video sin
+         abrir nada nuevo — así se pueden tomar varias fotos seguidas sin
+         salir de esta pantalla. DEVOLUCIÓN no usa esto — sigue con la
+         cámara nativa de siempre (triggerPhoto()). -->
+    <video id="camara-viva" playsinline autoplay muted
+           style="display:none; width:100%; border-radius:12px; margin:6px 0 10px; background:#000; aspect-ratio:4/3; object-fit:cover"></video>
     <div class="card" id="found-card">
       <div class="card-row">
         <span class="label">SKU</span>
@@ -763,7 +772,7 @@
     <!-- Fotos tomadas para ESTA etiqueta (etiqueta, caja, pedido… las que hagan falta) -->
     <p class="photo-count" id="photo-count" style="display:none"></p>
     <div class="photo-strip" id="photo-strip" style="display:none"></div>
-    <button class="btn btn-secondary" id="photo-btn" onclick="triggerPhoto()">
+    <button class="btn btn-secondary" id="photo-btn" onclick="handleTomarFotoClick()">
       📸&nbsp; Tomar foto de evidencia
     </button>
     <button class="btn btn-primary" id="send-btn" onclick="submitPhoto()" style="display:none">
@@ -841,12 +850,12 @@ let currentEnvioData = null;   // 🆕 (13-ago): SKU/Cantidad/Pedido/Remisión c
                                 // poder mandarlo también en el POST y que quede escrito en
                                 // el Sheet de devoluciones, no solo mostrado en pantalla.
 let yaTieneFotos     = 0;      // evidencias que ESTA etiqueta ya tenía guardadas
-// 🆕 (20-ago): true cuando la etiqueta escaneada es un PACK de ML con más
-// de un producto — en ese caso, en Envío, NO se sube la foto sola en
-// cuanto se toma (ver handlePhoto()): se permite tomar varias y Elena
-// decide cuándo terminar y subirlas juntas. Con un solo producto, sigue
-// subiéndose sola de inmediato (rápido, sin tocar "Enviar").
-let currentIsMultiItem = false;
+// 🆕 (20-ago): stream de la cámara EN VIVO usada SOLO en Envío para tomar
+// fotos de evidencia (ver abrirCamaraViva()/cerrarCamaraViva() más abajo).
+// Nada que ver con la cámara del escáner de códigos (esa es de la
+// librería html5-qrcode, independiente) ni con la cámara nativa que sigue
+// usando Devolución (triggerPhoto()).
+let liveCameraStream = null;
 
 // Elena decidió reemplazar la evidencia anterior: se quita el aviso y aparece
 // el botón de foto. El backend sobreescribe la celda, así que a partir de aquí
@@ -926,6 +935,7 @@ function showScreen(id) {
 // de regreso al menú.
 function goHome() {
   cancelAutoAdvance();
+  cerrarCamaraViva();   // 🆕 (20-ago): suelta la cámara en vivo de evidencia si estaba abierta
   stopScanner();
   scanning         = false;
   currentTracking  = null;
@@ -1183,6 +1193,7 @@ function mostrarPalomitaRapida() {
 
 function scanAgainSameChannel() {
   cancelAutoAdvance();
+  cerrarCamaraViva();   // 🆕 (20-ago): suelta la cámara en vivo de evidencia antes de reanudar el escáner de códigos
   currentTracking  = null;
   currentRow       = null;
   currentRows      = [];
@@ -1199,6 +1210,7 @@ async function stopScanner() {
 
 function cancelScanner() {
   cancelAutoAdvance();
+  cerrarCamaraViva();   // 🆕 (20-ago): suelta la cámara en vivo de evidencia si estaba abierta
   stopScanner();
   comboSheinTiktok = false;
   // 🆕 (17-ago): Devolución ya no tiene pantalla de "elegir canal" a la
@@ -1460,16 +1472,11 @@ async function onScanSuccess(raw) {
         currentRows  = (Array.isArray(data.rows) && data.rows.length) ? data.rows : [data.row];
 
         // Un paquete de ML puede traer VARIOS productos (un "Pack"). El
-        // backend manda un renglón por SKU en data.items. Se calcula aquí
-        // (antes, más abajo, solo se usaba para mostrar la lista en
-        // devolución) porque en ENVÍO también decide si la foto se sube
-        // sola en cuanto se toma (1 producto) o si se dejan varias fotos
-        // antes de subir, esperando a que Elena decida terminar (pack de
-        // varios productos) — ver handlePhoto().
+        // backend manda un renglón por SKU en data.items — se usa más
+        // abajo para la lista de SKU/Cantidad en devolución.
         const items = (Array.isArray(data.items) && data.items.length)
           ? data.items
           : [{ row: data.row, sku: data.sku, qty: data.qty }];
-        currentIsMultiItem = items.length > 1;
 
         clearPhotos();
 
@@ -1477,22 +1484,27 @@ async function onScanSuccess(raw) {
         newBanner.style.display = 'none';
         document.getElementById('found-card').style.opacity = '1';
         document.getElementById('found-title').textContent  =
-          (currentMode === 'envio') ? 'Toca para la foto' : 'Pedido encontrado';
+          (currentMode === 'envio') ? 'Foto de evidencia' : 'Pedido encontrado';
 
         // 🆕 (20-ago): SOLO envío — sin datos del pedido en pantalla (SKU,
         // Cantidad, Remisión, N° Pedido, Estado, foto de catálogo): solo
         // escanear y fotografiar, lo más rápido posible. El aviso de "ya
         // tiene fotos" (si aplica, más abajo) SÍ se deja — no es
         // información del pedido, es la alerta que evita borrar evidencia
-        // ya guardada sin querer. DEVOLUCIÓN no se toca, sigue viendo todo
-        // el detalle como siempre.
+        // ya guardada sin querer. Y se abre la cámara EN VIVO directo aquí
+        // (abrirCamaraViva()) — nada de pantalla con solo un botón: la
+        // cámara ya está lista para tomar la foto en cuanto se llega a
+        // esta pantalla. DEVOLUCIÓN no se toca, sigue viendo todo el
+        // detalle como siempre y usando su cámara nativa de siempre.
         if (currentMode === 'envio') {
           document.getElementById('found-card').style.display = 'none';
           document.getElementById('found-mode-indicator').style.display = 'none';
           document.getElementById('info-catalog-photo').style.display = 'none';
+          abrirCamaraViva();
         } else {
           document.getElementById('found-card').style.display = '';
           document.getElementById('found-mode-indicator').style.display = '';
+          cerrarCamaraViva();
         }
 
         // ¿Ya se le tomó foto a esta etiqueta? Al guardar, las fotos nuevas
@@ -1512,7 +1524,7 @@ async function onScanSuccess(raw) {
           document.getElementById('photo-btn').style.display = '';
         }
 
-        // (items y currentIsMultiItem ya se calcularon arriba)
+        // (items ya se calculó arriba)
         if (items.length > 1) {
           document.getElementById('info-sku').innerHTML =
             items.map(function (it) {
@@ -1709,6 +1721,10 @@ async function buscarPorSufijoManual(sufijo) {
 // se le van acumulando en miniatura. No hay número fijo: con una basta,
 // y puede tomar las que quiera. Todas se suben juntas al presionar Enviar.
 
+// 🆕 (20-ago): SOLO devolución usa la cámara nativa del celular (abre la
+// app de cámara de verdad, una foto a la vez). Envío usa la cámara EN
+// VIVO de abajo (abrirCamaraViva / capturarFotoEnvioViva) — ver
+// handleTomarFotoClick(), que decide cuál de las dos según el modo.
 function triggerPhoto() {
   const input = document.getElementById('photo-input');
   input.value = '';   // permite volver a elegir la misma foto
@@ -1721,16 +1737,84 @@ async function handlePhoto(input) {
   currentThumbs.push(URL.createObjectURL(file));
   currentPhotos.push(await compressImage(file));
   renderPhotos();
-  // 🆕 (20-ago): ENVÍO automático — SOLO cuando es un producto único: una
-  // sola foto y se sube sola, sin esperar a que se toque "Enviar
-  // evidencia". Si es un PACK de varios productos (currentIsMultiItem),
-  // NO se auto-envía — se deja que Elena tome las fotos que necesite y
-  // decida cuándo terminar con el botón "Enviar evidencia" de siempre.
-  // DEVOLUCIÓN tampoco se auto-envía nunca: ahí sigue haciendo falta
-  // elegir Buen Estado/Merma antes (submitPhoto() ya lo valida).
-  if (currentMode === 'envio' && !currentIsMultiItem) {
-    submitPhoto();
+  // Nunca se auto-envía aquí: esta función SOLO la usa Devolución, que
+  // siempre necesita elegir Buen Estado/Merma y tocar "Enviar evidencia"
+  // a propósito (submitPhoto() ya lo valida).
+}
+
+// 🆕 (20-ago): botón "Tomar foto de evidencia" — en Envío usa la cámara EN
+// VIVO ya abierta (sin abrir nada nuevo, sin pedir permiso otra vez); en
+// Devolución sigue abriendo la cámara nativa del celular, como siempre.
+function handleTomarFotoClick() {
+  if (currentMode === 'envio') {
+    capturarFotoEnvioViva();
+  } else {
+    triggerPhoto();
   }
+}
+
+// ── Cámara EN VIVO de evidencia (SOLO Envío) ──────────────────────────
+// A diferencia de triggerPhoto() (que abre la app de cámara nativa del
+// celular, una foto a la vez, y necesita un toque fresco cada vez), esto
+// deja un <video> con la cámara abierta EN LA MISMA PÁGINA. Una vez
+// abierta, cada toque de "Tomar foto" solo saca una foto del video que ya
+// está corriendo — no abre nada nuevo, así que se pueden tomar varias
+// fotos seguidas sin salir de la pantalla ni pedir permiso otra vez.
+async function abrirCamaraViva() {
+  const video = document.getElementById('camara-viva');
+  if (!video) return;
+  try {
+    if (liveCameraStream) { // ya había una abierta (p.ej. venía de "Reemplazar") — se reusa
+      video.style.display = 'block';
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    liveCameraStream = stream;
+    video.srcObject = stream;
+    video.style.display = 'block';
+  } catch (err) {
+    // No se pudo abrir (permiso negado, cámara ocupada, etc.) — se deja
+    // oculta y el botón "Tomar foto" cae de todas formas a triggerPhoto()
+    // más abajo (capturarFotoEnvioViva) como respaldo, para nunca dejarla
+    // sin poder subir evidencia.
+    video.style.display = 'none';
+  }
+}
+
+function cerrarCamaraViva() {
+  const video = document.getElementById('camara-viva');
+  if (liveCameraStream) {
+    liveCameraStream.getTracks().forEach(function (t) { t.stop(); });
+    liveCameraStream = null;
+  }
+  if (video) { video.style.display = 'none'; video.srcObject = null; }
+}
+
+function capturarFotoEnvioViva() {
+  const video = document.getElementById('camara-viva');
+  // Respaldo: si la cámara en vivo no se pudo abrir por lo que sea, se
+  // cae a la cámara nativa de siempre — nunca se pierde la posibilidad de
+  // tomar la foto.
+  if (!video || !liveCameraStream || !video.videoWidth) {
+    triggerPhoto();
+    return;
+  }
+  const MAX = 1000;
+  let w = video.videoWidth, h = video.videoHeight;
+  if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+  else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  // dataURL sirve directo como src de la miniatura (removePhoto/clearPhotos
+  // llaman revokeObjectURL sobre esto, pero en un data: URL eso no hace
+  // nada — es inofensivo, no hace falta un caso especial).
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+  currentThumbs.push(dataUrl);
+  currentPhotos.push(dataUrl.split(',')[1]);
+  renderPhotos();
 }
 
 function removePhoto(i) {

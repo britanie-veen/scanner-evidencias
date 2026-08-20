@@ -1462,7 +1462,24 @@ async function onScanSuccess(raw) {
         document.getElementById('manual-entry-box').style.display = 'none';
         newBanner.style.display = 'none';
         document.getElementById('found-card').style.opacity = '1';
-        document.getElementById('found-title').textContent  = 'Pedido encontrado';
+        document.getElementById('found-title').textContent  =
+          (currentMode === 'envio') ? 'Toca para la foto' : 'Pedido encontrado';
+
+        // 🆕 (20-ago): SOLO envío — sin datos del pedido en pantalla (SKU,
+        // Cantidad, Remisión, N° Pedido, Estado, foto de catálogo): solo
+        // escanear y fotografiar, lo más rápido posible. El aviso de "ya
+        // tiene fotos" (si aplica, más abajo) SÍ se deja — no es
+        // información del pedido, es la alerta que evita borrar evidencia
+        // ya guardada sin querer. DEVOLUCIÓN no se toca, sigue viendo todo
+        // el detalle como siempre.
+        if (currentMode === 'envio') {
+          document.getElementById('found-card').style.display = 'none';
+          document.getElementById('found-mode-indicator').style.display = 'none';
+          document.getElementById('info-catalog-photo').style.display = 'none';
+        } else {
+          document.getElementById('found-card').style.display = '';
+          document.getElementById('found-mode-indicator').style.display = '';
+        }
 
         // ¿Ya se le tomó foto a esta etiqueta? Al guardar, las fotos nuevas
         // reemplazan a las viejas — así que se le avisa ANTES de que gaste el

@@ -1290,6 +1290,19 @@ async function onScanSuccess(raw) {
     return;
   }
 
+  // 🆕 (20-ago): SOLO envío — se captura el cuadro que la cámara está
+  // viendo EN ESTE INSTANTE (el mismo con el que se leyó el código de
+  // barras) para usarlo como foto de evidencia, ANTES de apagar la
+  // cámara (stopScanner(), justo abajo). Así, si el pedido resulta ser
+  // uno nuevo (sin fotos previas), no hace falta abrir ninguna cámara
+  // aparte ni pedir ningún toque — ya se tiene la imagen lista para
+  // subir en cuanto se confirme el escaneo. Si por lo que sea no se
+  // pudo capturar (cámara no lista, etc.), se deja como null y más abajo
+  // se cae de regreso al botón "Tomar foto" de siempre — nunca se pierde
+  // la posibilidad de subir evidencia. DEVOLUCIÓN no se toca: sigue
+  // tomando su propia foto a mano, como siempre.
+  const autoFrameB64 = (currentMode === 'envio') ? capturarFrameCamara() : null;
+
   scanning = true;
   await stopScanner();
   currentTracking = tracking;
@@ -1445,19 +1458,26 @@ async function onScanSuccess(raw) {
         yaTieneFotos = Number(data.fotos) || 0;
         currentRows  = (Array.isArray(data.rows) && data.rows.length) ? data.rows : [data.row];
 
-        // 🔴 (20-ago, revertido el mismo día): se había intentado abrir la
-        // cámara SOLA aquí, sin que Elena tocara nada — pero el celular
-        // bloquea en silencio abrir la cámara/galería cuando no viene de
-        // un toque directo en ese instante (esto pasa después de esperar
-        // la respuesta del servidor, así que ya no cuenta como "toque
-        // reciente" para el navegador). Resultado real: la pantalla se
-        // quedaba congelada en "Buscando en el Sheet..." con CUALQUIER
-        // etiqueta, sin ningún error visible. Se revierte a pedir un toque
-        // (el botón "Tomar foto" de siempre, más abajo) — eso sí abre la
-        // cámara de forma confiable en cualquier celular. Lo que SÍ se
-        // queda de la automatización: en cuanto toma la foto, se sube sola
-        // y aparece la palomita verde, sin tener que tocar "Enviar".
+        // 🔴 (20-ago): el primer intento de automatizar esto abría una
+        // cámara NUEVA sola (triggerPhoto()) y el celular la bloqueaba en
+        // silencio por no venir de un toque directo — pantalla congelada.
+        // 🆕 (20-ago, 2do intento): en vez de abrir una cámara nueva, se
+        // reusa el CUADRO que ya se capturó arriba (autoFrameB64, tomado
+        // del video de escaneo antes de apagarlo) — no abre nada nuevo,
+        // así que no hay bloqueo posible. Si el pedido es nuevo (sin fotos
+        // previas) y si la captura sí funcionó, se sube sola de inmediato,
+        // sin mostrar ninguna pantalla intermedia. DEVOLUCIÓN nunca entra
+        // aquí (currentMode siempre 'envio' en este atajo).
         clearPhotos();
+        if (currentMode === 'envio' && yaTieneFotos === 0 && autoFrameB64) {
+          currentPhotos.push(autoFrameB64);
+          await submitPhoto();
+          return;
+        }
+        // Respaldo: si no hubo cuadro capturado (cámara no lista a tiempo,
+        // etc.), o si la etiqueta ya tenía fotos, se cae al flujo normal
+        // de abajo — pantalla con el botón "Tomar foto" de siempre. Nunca
+        // se pierde la posibilidad de subir evidencia.
 
         document.getElementById('manual-entry-box').style.display = 'none';
         newBanner.style.display = 'none';
@@ -1777,6 +1797,28 @@ function renderPhotos() {
 // lado del servidor. Si alguna vez hace falta más nitidez (por ejemplo, para
 // leer bien un SKU chiquito en la foto), se puede subir MAX y/o la calidad
 // aquí mismo — es el único lugar que hay que tocar.
+// 🆕 (20-ago): SOLO envío — toma una "foto" directo del cuadro que la
+// cámara de escaneo está mostrando en ese instante (sin abrir ninguna
+// cámara nueva, por eso no necesita ningún toque ni se puede bloquear).
+// Mismo tamaño/calidad que compressImage(), para que el archivo que
+// llega a Drive pese igual que las fotos tomadas a mano.
+function capturarFrameCamara() {
+  try {
+    const video = document.querySelector('#reader video');
+    if (!video || !video.videoWidth) return null;
+    const MAX = 1000;
+    let w = video.videoWidth, h = video.videoHeight;
+    if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+    else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.65).split(',')[1];
+  } catch (_) {
+    return null;
+  }
+}
+
 function compressImage(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();

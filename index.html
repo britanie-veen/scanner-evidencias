@@ -559,6 +559,33 @@
       color: var(--white);
       border-color: var(--black);
     }
+    /* 🆕 (20-ago): palomita rápida de ENVÍO automático — reemplaza a la
+       pantalla completa de "Listo". Vive dentro de screen-scanner, justo
+       arriba de la cámara (#reader), oculta por defecto. mostrarPalomitaRapida()
+       le agrega la clase .show un momento y la vuelve a quitar sola. */
+    .quick-check-toast {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 0 0 10px;
+      padding: 10px;
+      border-radius: 2px;
+      background: #1E9E4C;
+      color: var(--white);
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity .15s ease, transform .15s ease;
+    }
+    .quick-check-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -627,6 +654,9 @@
       <h2 id="scanner-title">Escanear código</h2>
     </div>
     <div class="session-count" id="scanner-session-count" style="display:none"></div>
+    <!-- 🆕 (20-ago): SOLO envío automático — palomita rápida en vez de la
+         pantalla completa de "Listo". Ver mostrarPalomitaRapida(). -->
+    <div class="quick-check-toast" id="quick-check-toast">✓&nbsp; Listo</div>
     <div id="reader"></div>
     <p class="scan-hint" id="scan-hint-text">Apunta a cualquier código<br>de la etiqueta</p>
     <div class="spacer"></div>
@@ -1130,6 +1160,20 @@ async function startScanner() {
 // Reinicia el escáner para el MISMO canal/modo — se usa después de un
 // escaneo exitoso, un "no encontrado", o un error, para no forzar a
 // reseleccionar canal cada vez.
+// 🆕 (20-ago): SOLO envío automático — palomita chiquita arriba de la
+// cámara, se ve un momento y se apaga sola. No bloquea nada: se llama
+// justo después de volver a mostrar screen-scanner (ver submitPhoto()),
+// así que el escáner ya está listo para el siguiente código mientras
+// la palomita todavía se está viendo.
+function mostrarPalomitaRapida() {
+  const toast = document.getElementById('quick-check-toast');
+  if (!toast) return;
+  toast.classList.remove('show');
+  void toast.offsetWidth; // reinicia la animación si se dispara dos veces seguidas muy rápido
+  toast.classList.add('show');
+  setTimeout(function () { toast.classList.remove('show'); }, 700);
+}
+
 function scanAgainSameChannel() {
   cancelAutoAdvance();
   currentTracking  = null;
@@ -1391,6 +1435,28 @@ async function onScanSuccess(raw) {
         document.getElementById('photo-btn').style.display = '';
       } else {
         currentEnvioData = null;   // ya es un registro EXISTENTE, no un cruce con Ventas
+
+        // yaTieneFotos y currentRows se necesitan sí o sí (para decidir si
+        // hay que avisar de fotos duplicadas, y para el payload que se
+        // manda al guardar) — se calculan primero, antes de decidir si
+        // mostramos la pantalla de info o nos saltamos directo a la
+        // cámara (ver el bloque de ENVÍO automático justo abajo).
+        yaTieneFotos = Number(data.fotos) || 0;
+        currentRows  = (Array.isArray(data.rows) && data.rows.length) ? data.rows : [data.row];
+
+        // 🆕 (20-ago): ENVÍO automático — si esta etiqueta no tenía fotos
+        // previas guardadas, nos saltamos POR COMPLETO la pantalla de
+        // información (SKU/Cantidad/Pedido/Estado): la cámara se abre
+        // sola (ver triggerPhoto() + handlePhoto()). Si ya tenía fotos
+        // guardadas, se sigue mostrando el aviso normal para decidir
+        // reemplazar o no — eso no cambia. DEVOLUCIÓN nunca entra aquí
+        // (currentMode siempre es 'envio' en este atajo).
+        if (currentMode === 'envio' && yaTieneFotos === 0) {
+          clearPhotos();
+          triggerPhoto();
+          return;
+        }
+
         document.getElementById('manual-entry-box').style.display = 'none';
         newBanner.style.display = 'none';
         document.getElementById('found-card').style.opacity = '1';
@@ -1400,7 +1466,6 @@ async function onScanSuccess(raw) {
         // reemplazan a las viejas — así que se le avisa ANTES de que gaste el
         // tiempo fotografiando, y ella decide: reemplazar, o cancelar y pasar
         // al siguiente paquete.
-        yaTieneFotos = Number(data.fotos) || 0;
         const yaBanner = document.getElementById('ya-banner');
         if (yaTieneFotos > 0) {
           document.getElementById('ya-detalle').textContent =
@@ -1418,7 +1483,7 @@ async function onScanSuccess(raw) {
         // backend manda un renglón por SKU en data.items. Con uno solo se ve
         // igual que siempre; con varios se listan todos, porque Elena tiene
         // que saber qué va dentro antes de fotografiarlo.
-        currentRows = (Array.isArray(data.rows) && data.rows.length) ? data.rows : [data.row];
+        // (currentRows ya se calculó arriba, antes del atajo de ENVÍO automático)
         const items = (Array.isArray(data.items) && data.items.length)
           ? data.items
           : [{ row: data.row, sku: data.sku, qty: data.qty }];
@@ -1631,6 +1696,13 @@ async function handlePhoto(input) {
   currentThumbs.push(URL.createObjectURL(file));
   currentPhotos.push(await compressImage(file));
   renderPhotos();
+  // 🆕 (20-ago): ENVÍO automático — una sola foto y se sube sola, sin
+  // esperar a que se toque "Enviar evidencia". DEVOLUCIÓN no se toca:
+  // ahí sigue haciendo falta elegir Buen Estado/Merma antes de enviar
+  // (submitPhoto() ya lo valida), así que nunca se auto-envía sola.
+  if (currentMode === 'envio') {
+    submitPhoto();
+  }
 }
 
 function removePhoto(i) {
@@ -1740,6 +1812,22 @@ async function submitPhoto() {
     const data = await res.json();
     if (data.success) {
       sessionCount++;               // una etiqueta más vaciada de este canal
+
+      // 🆕 (20-ago): ENVÍO automático — ya no se arma ni se muestra la
+      // pantalla "Listo" (con tracking/remisión/botones): se ve una
+      // palomita chiquita arriba de la cámara y se regresa a escanear
+      // DE INMEDIATO, sin esperar nada. DEVOLUCIÓN se queda exactamente
+      // igual que siempre — sí necesita esa pantalla (Merma, botones de
+      // salida, etc.), así que ni se toca.
+      if (currentMode === 'envio') {
+        renderSession();
+        clearPhotos();
+        cancelAutoAdvance();
+        scanAgainSameChannel();
+        mostrarPalomitaRapida();
+        return;
+      }
+
       const fotos = (data.fotos || n);
       const linea = fotos === 1
         ? 'Foto guardada en Drive ✓'
@@ -1771,21 +1859,6 @@ async function submitPhoto() {
       renderSession();
       clearPhotos();
       showScreen('screen-success');
-
-      // 🆕 (17-ago): en ENVÍO ya no hace falta tocar "Escanear otra guía" —
-      // se ve el check de "Listo" un momento y solas avanza a la siguiente
-      // etiqueta, para ahorrar toques cuando hay mucho volumen. Los botones
-      // "Escanear otra guía" / "Terminar canal" se quedan visibles por si
-      // se necesita salir antes de que se cumpla el tiempo. En DEVOLUCIÓN
-      // no se toca nada — se queda igual que siempre (hay más pasos de por
-      // medio, como Merma, que sí conviene confirmar a mano).
-      if (currentMode === 'envio') {
-        cancelAutoAdvance();
-        autoAdvanceTimer = setTimeout(function () {
-          autoAdvanceTimer = null;
-          scanAgainSameChannel();
-        }, 900);
-      }
     } else {
       throw new Error(data.error || 'Error en el servidor');
     }

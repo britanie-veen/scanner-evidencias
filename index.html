@@ -16,6 +16,7 @@
       --surface: #F5F5F5;
       --border:  #E8E8E8;
       --muted:   #999999;
+      --green:   #1E9E4C;
     }
     body {
       font-family: 'Montserrat', -apple-system, sans-serif;
@@ -1444,18 +1445,19 @@ async function onScanSuccess(raw) {
         yaTieneFotos = Number(data.fotos) || 0;
         currentRows  = (Array.isArray(data.rows) && data.rows.length) ? data.rows : [data.row];
 
-        // 🆕 (20-ago): ENVÍO automático — si esta etiqueta no tenía fotos
-        // previas guardadas, nos saltamos POR COMPLETO la pantalla de
-        // información (SKU/Cantidad/Pedido/Estado): la cámara se abre
-        // sola (ver triggerPhoto() + handlePhoto()). Si ya tenía fotos
-        // guardadas, se sigue mostrando el aviso normal para decidir
-        // reemplazar o no — eso no cambia. DEVOLUCIÓN nunca entra aquí
-        // (currentMode siempre es 'envio' en este atajo).
-        if (currentMode === 'envio' && yaTieneFotos === 0) {
-          clearPhotos();
-          triggerPhoto();
-          return;
-        }
+        // 🔴 (20-ago, revertido el mismo día): se había intentado abrir la
+        // cámara SOLA aquí, sin que Elena tocara nada — pero el celular
+        // bloquea en silencio abrir la cámara/galería cuando no viene de
+        // un toque directo en ese instante (esto pasa después de esperar
+        // la respuesta del servidor, así que ya no cuenta como "toque
+        // reciente" para el navegador). Resultado real: la pantalla se
+        // quedaba congelada en "Buscando en el Sheet..." con CUALQUIER
+        // etiqueta, sin ningún error visible. Se revierte a pedir un toque
+        // (el botón "Tomar foto" de siempre, más abajo) — eso sí abre la
+        // cámara de forma confiable en cualquier celular. Lo que SÍ se
+        // queda de la automatización: en cuanto toma la foto, se sube sola
+        // y aparece la palomita verde, sin tener que tocar "Enviar".
+        clearPhotos();
 
         document.getElementById('manual-entry-box').style.display = 'none';
         newBanner.style.display = 'none';

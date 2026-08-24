@@ -15,6 +15,7 @@
     --muted:   #999999;
     --green:   #1E9E4C;
     --amber:   #C97A00;
+    --red:     #C0392B;
   }
   body {
     font-family: 'Montserrat', -apple-system, sans-serif;
@@ -114,6 +115,14 @@
     color: var(--white);
     border-color: var(--amber);
   }
+  /* 🆕 (24-ago): aviso cuando el pedido ya está marcado "Cancelado" en
+     el Sheet de Ventas — segundo filtro además del aviso de Envío. Rojo,
+     para distinguirlo claramente de los demás estados. */
+  .result-card.cancelado {
+    background: var(--red);
+    color: var(--white);
+    border-color: var(--red);
+  }
   .result-card.error {
     background: var(--white);
     border: 1.5px dashed var(--black);
@@ -133,12 +142,14 @@
   }
   .result-card.ok .state-icon,
   .result-card.notfound .state-icon,
-  .result-card.repetido .state-icon {
+  .result-card.repetido .state-icon,
+  .result-card.cancelado .state-icon {
     background: var(--white);
     color: var(--black);
   }
   .result-card.ok .state-icon { color: var(--green); }
   .result-card.repetido .state-icon { color: var(--amber); }
+  .result-card.cancelado .state-icon { color: var(--red); }
   .result-title {
     font-size: 20px;
     font-weight: 900;
@@ -157,7 +168,8 @@
   }
   .result-card.ok .result-code,
   .result-card.notfound .result-code,
-  .result-card.repetido .result-code { background: rgba(255,255,255,.12); }
+  .result-card.repetido .result-code,
+  .result-card.cancelado .result-code { background: rgba(255,255,255,.12); }
   .result-detail {
     font-size: 11px;
     font-weight: 200;
@@ -168,7 +180,8 @@
   }
   .result-card.ok .result-detail,
   .result-card.notfound .result-detail,
-  .result-card.repetido .result-detail { color: rgba(255,255,255,.6); }
+  .result-card.repetido .result-detail,
+  .result-card.cancelado .result-detail { color: rgba(255,255,255,.6); }
   .channel-badge {
     display: inline-flex;
     align-items: center;
@@ -184,7 +197,8 @@
   }
   .result-card.ok .channel-badge,
   .result-card.notfound .channel-badge,
-  .result-card.repetido .channel-badge { background: rgba(255,255,255,.14); color: var(--white); }
+  .result-card.repetido .channel-badge,
+  .result-card.cancelado .channel-badge { background: rgba(255,255,255,.14); color: var(--white); }
   .placeholder {
     font-size: 12px;
     font-weight: 200;
@@ -225,10 +239,27 @@ const CHANNEL_LABELS = {
 
 const input = document.getElementById('scan-input');
 const card  = document.getElementById('result-card');
-let procesando = false;
+
+// 🔧 (24-ago): ARREGLO DE LOS HUECOS EN PRODUCCIÓN — antes, mientras se
+// procesaba un escaneo, el cuadro de texto se bloqueaba (input.disabled)
+// para no cruzar dos escaneos. El problema: un campo de texto bloqueado
+// en el navegador IGNORA por completo cualquier letra que le llegue — así
+// que si la pistola escaneaba una etiqueta nueva mientras la anterior
+// todavía se estaba procesando, esas letras se perdían sin ningún aviso.
+// Eso eran los huecos que aparecieron en la columna "Entregado" al
+// probar con Rodrigo: se escaneaban más rápido de lo que el sistema
+// alcanzaba a procesar. Ahora el cuadro NUNCA se bloquea — siempre está
+// listo para recibir el siguiente escaneo al instante — y cada escaneo
+// que llega se guarda en una fila (cola) que se procesa uno por uno, en
+// orden, sin perder ninguno aunque lleguen más rápido de lo que se
+// alcanzan a procesar. Sin contador en pantalla (a propósito, para
+// mantenerlo simple y rápido de usar) — nada más se ve el resultado del
+// que se acaba de procesar, y sigue con el que sigue en la fila.
+const cola = [];
+let procesandoCola = false;
 
 function focusInput() {
-  if (!input.disabled) input.focus();
+  input.focus();
 }
 window.addEventListener('load', focusInput);
 document.addEventListener('click', focusInput);
@@ -258,8 +289,27 @@ function mostrarCargando(codigo) {
 // escaneado" — para detectar a tiempo si se repitió por accidente el
 // mismo paquete de envío. No bloquea nada: la fila se sigue marcando
 // Entregado igual, solo se hace evidente que era un repetido.
+// 🆕 (24-ago): si el pedido ya está marcado "Cancelado" en el Sheet de
+// Ventas (data.cancelado), se muestra en rojo — segundo filtro además
+// del aviso que ya existe en Envío, por si algo se canceló después de
+// pasar por Envío o se les fue por alguna razón. Tampoco bloquea nada ni
+// detiene la fila de escaneos: se marca "Entregado" igual (para que
+// quede registro de que la paquetería sí se lo llevó), solo se hace
+// evidente para revisarlo después. Si por algún motivo coinciden los
+// dos avisos (cancelado Y repetido), gana Cancelado por ser lo más
+// grave.
 function mostrarOk(data) {
   const nombreCanal = CHANNEL_LABELS[data.channel] || data.channel || '—';
+  if (data.cancelado) {
+    card.className = 'result-card cancelado';
+    card.innerHTML =
+      '<div class="state-icon">✗</div>' +
+      '<div class="result-title">Orden cancelada</div>' +
+      '<div class="result-code">' + data.tracking + '</div>' +
+      '<div class="result-detail">El Sheet de Ventas ya marca este pedido como Cancelado — revísalo</div>' +
+      '<span class="channel-badge">' + nombreCanal + '</span>';
+    return;
+  }
   if (data.yaEntregado) {
     card.className = 'result-card repetido';
     card.innerHTML =
@@ -298,11 +348,11 @@ function mostrarError(mensaje, codigo) {
     '<div class="result-detail">' + mensaje + '</div>';
 }
 
-async function procesarEscaneo(codigoCrudo) {
-  const codigo = limpiarCodigo(codigoCrudo);
-  if (!codigo || procesando) return;
-  procesando = true;
-  input.disabled = true;
+// Procesa UN escaneo contra el backend y pinta el resultado. Ya no
+// controla el cuadro de texto para nada (ni lo bloquea ni lo limpia) —
+// eso lo maneja el listener de abajo, al momento mismo del Enter, para
+// que nunca se pierda una letra de la pistola mientras esto corre.
+async function procesarUnEscaneo_(codigo) {
   mostrarCargando(codigo);
   try {
     const url = APPS_SCRIPT_URL + '?action=marcarEntregado&tracking=' + encodeURIComponent(codigo);
@@ -317,20 +367,35 @@ async function procesarEscaneo(codigoCrudo) {
     }
   } catch (err) {
     mostrarError('Error de conexión: ' + err.message, codigo);
-  } finally {
-    procesando = false;
-    input.disabled = false;
-    input.value = '';
-    focusInput();
   }
+}
+
+// Procesa la cola de escaneos pendientes, uno por uno, EN ORDEN — nunca
+// dos a la vez (así los resultados se muestran uno tras otro, no se
+// pisan entre sí). Si mientras procesa uno llegan más, se van quedando
+// en la fila y este mismo loop los va sacando sin perder ninguno.
+async function procesarCola_() {
+  if (procesandoCola) return; // ya hay un loop corriendo, no se necesita otro
+  procesandoCola = true;
+  while (cola.length) {
+    const codigo = cola.shift();
+    await procesarUnEscaneo_(codigo);
+  }
+  procesandoCola = false;
 }
 
 input.addEventListener('keydown', function (e) {
   if (e.key !== 'Enter') return;
   e.preventDefault();
-  const codigo = input.value.trim();
+  const codigo = limpiarCodigo(input.value.trim());
+  // El cuadro se limpia DE INMEDIATO (no se espera a nada) para que la
+  // pistola pueda seguir escaneando ya mismo, sin importar si el
+  // escaneo anterior sigue en proceso.
   input.value = '';
-  if (codigo) procesarEscaneo(codigo);
+  if (codigo) {
+    cola.push(codigo);
+    procesarCola_();
+  }
 });
 </script>
 </body>

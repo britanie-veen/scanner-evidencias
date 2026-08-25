@@ -206,6 +206,103 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+
+  /* 🆕 (25-ago): contador de sesión + historial — para poder comparar
+     "cuántos paquetes tengo en el bulto" contra "cuántos marcó el
+     sistema" SIN tener que ir hasta la Sheet. Todo esto vive solo en
+     memoria del navegador: se resetea cada vez que se recarga la
+     página, a propósito, para que cada sesión de escaneo (cada bulto)
+     empiece su cuenta en cero. */
+  .session-bar {
+    margin-top: 28px;
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .session-count {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .session-label {
+    font-size: 11px;
+    font-weight: 200;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .historial {
+    margin-top: 14px;
+    width: 100%;
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+  .historial-vacio {
+    padding: 20px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 200;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .historial-fila {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-left: 4px solid var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .historial-fila:last-child { border-bottom: none; }
+  .historial-fila.ok        { border-left-color: var(--green); }
+  .historial-fila.repetido  { border-left-color: var(--amber); }
+  .historial-fila.cancelado,
+  .historial-fila.notfound,
+  .historial-fila.error     { border-left-color: var(--red); }
+  .historial-hora {
+    font-weight: 200;
+    color: var(--muted);
+    flex-shrink: 0;
+    width: 56px;
+  }
+  .historial-codigo {
+    font-weight: 700;
+    letter-spacing: .02em;
+    flex: 1;
+    word-break: break-all;
+  }
+  .historial-estado {
+    font-weight: 900;
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .historial-fila.ok        .historial-estado { color: var(--green); }
+  .historial-fila.repetido  .historial-estado { color: var(--amber); }
+  .historial-fila.cancelado .historial-estado,
+  .historial-fila.notfound  .historial-estado,
+  .historial-fila.error     .historial-estado { color: var(--red); }
+  .historial-repetido-sesion {
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-top: 2px;
+  }
 </style>
 </head>
 <body>
@@ -218,6 +315,14 @@
 
   <div class="result-card" id="result-card">
     <p class="placeholder">Aquí va apareciendo cada paquete escaneado</p>
+  </div>
+
+  <div class="session-bar">
+    <span class="session-count" id="session-count">0</span>
+    <span class="session-label">escaneados en esta sesión</span>
+  </div>
+  <div class="historial" id="historial">
+    <p class="historial-vacio">Aquí se va a ir llenando la lista de esta sesión</p>
   </div>
 </div>
 
@@ -240,6 +345,54 @@ const CHANNEL_LABELS = {
 const input = document.getElementById('scan-input');
 const card  = document.getElementById('result-card');
 
+// 🆕 (25-ago): contador + historial de ESTA sesión (se resetea al
+// recargar la página, a propósito — cada bulto empieza en cero).
+// `vistosSesion` cuenta cuántas veces se ha escaneado cada código EN
+// ESTA SESIÓN — esto es distinto del aviso "yaEntregado" que manda el
+// backend (que revisa el Sheet completo, de cualquier día). Aquí lo que
+// nos interesa es: "¿ya pasó esta misma etiqueta por AQUÍ, hace un
+// rato, en este mismo bulto?" — útil para agarrar un doble-escaneo por
+// accidente al momento, sin esperar a que alguien lo note después.
+let contadorSesion = 0;
+const vistosSesion = new Map(); // codigo -> veces visto en esta sesión
+const sessionCountEl = document.getElementById('session-count');
+const historialEl = document.getElementById('historial');
+
+function horaCorta() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' +
+         String(d.getMinutes()).padStart(2, '0') + ':' +
+         String(d.getSeconds()).padStart(2, '0');
+}
+
+// Agrega una fila al historial visible (arriba = más reciente) y sube
+// el contador. `tipo` es una de: ok | repetido | cancelado | notfound |
+// error — mismos nombres que usan las clases de result-card, para
+// reusar los mismos colores.
+function agregarHistorial(codigo, tipo, estadoTexto) {
+  contadorSesion++;
+  sessionCountEl.textContent = contadorSesion;
+
+  const vecesAntes = vistosSesion.get(codigo) || 0;
+  vistosSesion.set(codigo, vecesAntes + 1);
+
+  if (historialEl.querySelector('.historial-vacio')) {
+    historialEl.innerHTML = '';
+  }
+
+  const fila = document.createElement('div');
+  fila.className = 'historial-fila ' + tipo;
+  let extra = '';
+  if (vecesAntes >= 1) {
+    extra = '<span class="historial-repetido-sesion">🔁 ya se escaneó ' + (vecesAntes + 1) + ' veces en esta sesión</span>';
+  }
+  fila.innerHTML =
+    '<span class="historial-hora">' + horaCorta() + '</span>' +
+    '<span class="historial-codigo">' + codigo + extra + '</span>' +
+    '<span class="historial-estado">' + estadoTexto + '</span>';
+  historialEl.insertBefore(fila, historialEl.firstChild);
+}
+
 // 🔧 (24-ago): ARREGLO DE LOS HUECOS EN PRODUCCIÓN — antes, mientras se
 // procesaba un escaneo, el cuadro de texto se bloqueaba (input.disabled)
 // para no cruzar dos escaneos. El problema: un campo de texto bloqueado
@@ -250,13 +403,34 @@ const card  = document.getElementById('result-card');
 // probar con Rodrigo: se escaneaban más rápido de lo que el sistema
 // alcanzaba a procesar. Ahora el cuadro NUNCA se bloquea — siempre está
 // listo para recibir el siguiente escaneo al instante — y cada escaneo
-// que llega se guarda en una fila (cola) que se procesa uno por uno, en
-// orden, sin perder ninguno aunque lleguen más rápido de lo que se
-// alcanzan a procesar. Sin contador en pantalla (a propósito, para
-// mantenerlo simple y rápido de usar) — nada más se ve el resultado del
-// que se acaba de procesar, y sigue con el que sigue en la fila.
+// que llega se guarda en una fila (cola).
+//
+// 🚀 (25-ago v4): antes la cola se procesaba de A UNO (un escaneo
+// esperaba a que el anterior terminara del todo antes de empezar). Con
+// mucho volumen eso significa que, aunque cada escaneo individual sea
+// rápido, la fila se va acumulando detrás — si escaneas 10 paquetes en 3
+// segundos, el último tarda 10 veces lo que tarda uno solo en quedar
+// confirmado. Ahora se procesan varios AL MISMO TIEMPO (ver
+// CONCURRENCIA_MAX abajo) — varios "trabajadores" sacan de la misma fila
+// en paralelo, así que un lote grande se resuelve varias veces más
+// rápido en total. Lo único que cambia para quien escanea: el resultado
+// que se ve en pantalla puede no ser exactamente el último que
+// escaneaste (puede terminar antes uno que escaneaste un poquito
+// después) — pero el historial de abajo sigue registrando la hora real
+// de cada uno, así que no se pierde ni se confunde ningún dato, solo el
+// orden visual momentáneo puede variar. Ningún escaneo se pierde ni se
+// pisa con otro — cada uno se procesa completo, de principio a fin, cada
+// resultado se muestra y se agrega al historial exactamente una vez.
+const CONCURRENCIA_MAX = 4;
 const cola = [];
-let procesandoCola = false;
+let trabajadoresActivos = 0;
+
+async function trabajador_() {
+  while (cola.length) {
+    const codigo = cola.shift();
+    await procesarUnEscaneo_(codigo);
+  }
+}
 
 function focusInput() {
   input.focus();
@@ -308,6 +482,7 @@ function mostrarOk(data) {
       '<div class="result-code">' + data.tracking + '</div>' +
       '<div class="result-detail">El Sheet de Ventas ya marca este pedido como Cancelado — revísalo</div>' +
       '<span class="channel-badge">' + nombreCanal + '</span>';
+    agregarHistorial(data.tracking, 'cancelado', 'Cancelado');
     return;
   }
   if (data.yaEntregado) {
@@ -318,6 +493,7 @@ function mostrarOk(data) {
       '<div class="result-code">' + data.tracking + '</div>' +
       '<div class="result-detail">Esta etiqueta ya se había escaneado antes — revisa que no se repita el paquete</div>' +
       '<span class="channel-badge">' + nombreCanal + '</span>';
+    agregarHistorial(data.tracking, 'repetido', 'Ya entregado');
     return;
   }
   card.className = 'result-card ok';
@@ -327,6 +503,7 @@ function mostrarOk(data) {
     '<div class="result-code">' + data.tracking + '</div>' +
     '<div class="result-detail">' + data.filas + (data.filas === 1 ? ' fila marcada' : ' filas marcadas') + '</div>' +
     '<span class="channel-badge">' + nombreCanal + '</span>';
+  agregarHistorial(data.tracking, 'ok', 'Entregado');
 }
 
 function mostrarNoEncontrado(data) {
@@ -337,6 +514,7 @@ function mostrarNoEncontrado(data) {
     '<div class="result-title">No encontrado en Ventas</div>' +
     '<div class="result-code">' + data.tracking + '</div>' +
     '<span class="channel-badge">' + nombreCanal + '</span>';
+  agregarHistorial(data.tracking, 'notfound', 'No encontrado');
 }
 
 function mostrarError(mensaje, codigo) {
@@ -346,6 +524,7 @@ function mostrarError(mensaje, codigo) {
     '<div class="result-title">Error</div>' +
     (codigo ? '<div class="result-code">' + codigo + '</div>' : '') +
     '<div class="result-detail">' + mensaje + '</div>';
+  agregarHistorial(codigo || '—', 'error', 'Error');
 }
 
 // Procesa UN escaneo contra el backend y pinta el resultado. Ya no
@@ -370,18 +549,18 @@ async function procesarUnEscaneo_(codigo) {
   }
 }
 
-// Procesa la cola de escaneos pendientes, uno por uno, EN ORDEN — nunca
-// dos a la vez (así los resultados se muestran uno tras otro, no se
-// pisan entre sí). Si mientras procesa uno llegan más, se van quedando
-// en la fila y este mismo loop los va sacando sin perder ninguno.
-async function procesarCola_() {
-  if (procesandoCola) return; // ya hay un loop corriendo, no se necesita otro
-  procesandoCola = true;
-  while (cola.length) {
-    const codigo = cola.shift();
-    await procesarUnEscaneo_(codigo);
+// 🚀 (25-ago v4): prende "trabajadores" hasta llegar a CONCURRENCIA_MAX
+// (o hasta que ya no quede nada en la fila) — cada uno saca códigos de
+// la MISMA fila y los procesa de principio a fin, así que nunca hay dos
+// trabajadores procesando el mismo código a la vez (cada `shift()` saca
+// un código distinto). Si ya hay trabajadores suficientes corriendo,
+// esta función no hace nada más — los que ya están activos van a
+// terminar de sacar lo que se vaya agregando solos.
+function procesarCola_() {
+  while (trabajadoresActivos < CONCURRENCIA_MAX && cola.length) {
+    trabajadoresActivos++;
+    trabajador_().finally(function () { trabajadoresActivos--; });
   }
-  procesandoCola = false;
 }
 
 input.addEventListener('keydown', function (e) {

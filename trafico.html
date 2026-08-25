@@ -357,6 +357,14 @@ let contadorSesion = 0;
 const vistosSesion = new Map(); // codigo -> veces visto en esta sesión
 const sessionCountEl = document.getElementById('session-count');
 const historialEl = document.getElementById('historial');
+// 🔧 (25-ago v4): tope a la lista visible del historial — el CONTADOR de
+// arriba sigue sumando el total real de la sesión sin límite, pero la
+// lista de abajo (que sí vive como elementos en el navegador) solo
+// conserva los últimos HISTORIAL_MAX_FILAS. Esto es para que una sesión
+// larguísima (miles de escaneos sin recargar la página) nunca vaya
+// haciendo más pesado el navegador — se recorta lo más viejo, que de
+// todas formas ya no es lo que se necesita revisar al momento.
+const HISTORIAL_MAX_FILAS = 300;
 
 function horaCorta() {
   const d = new Date();
@@ -391,6 +399,13 @@ function agregarHistorial(codigo, tipo, estadoTexto) {
     '<span class="historial-codigo">' + codigo + extra + '</span>' +
     '<span class="historial-estado">' + estadoTexto + '</span>';
   historialEl.insertBefore(fila, historialEl.firstChild);
+
+  // Recorta lo más viejo si ya se pasó del tope — se quita del final
+  // (lo más antiguo, porque lo más reciente siempre se inserta al
+  // principio).
+  while (historialEl.children.length > HISTORIAL_MAX_FILAS) {
+    historialEl.removeChild(historialEl.lastChild);
+  }
 }
 
 // 🔧 (24-ago): ARREGLO DE LOS HUECOS EN PRODUCCIÓN — antes, mientras se

@@ -237,6 +237,25 @@
     .btn-ya-cancelar   { background: transparent; color: #7A4A00; }
     .btn-ya-reemplazar { background: #7A4A00; color: #fff; border-color: #7A4A00; }
     .btn-ya:active { opacity: .75; }
+    /* ── Aviso de orden cancelada — SOLO envío ────────────────
+       Mismo patrón visual que .ya-banner, pero en rojo (más grave
+       que "ya tiene fotos": aquí la orden ya no se debe enviar). */
+    .cancelado-banner {
+      background: #FDECEC;
+      border: 1.5px solid #D64545;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .cancelado-texto { display: flex; flex-direction: column; gap: 3px; }
+    .cancelado-texto strong { font-size: 15px; color: #8A1F1F; }
+    .cancelado-texto span   { font-size: 13px; color: #A83E3E; }
+    .cancelado-banner .btn-ya { border-color: #D64545; }
+    .cancelado-banner .btn-ya-cancelar { color: #8A1F1F; }
+    .btn-cancelado-continuar { background: #8A1F1F; color: #fff; border-color: #8A1F1F; }
 
     /* ── Pack de ML: varios SKUs en un mismo paquete ──────────
        Cuando el paquete trae más de un producto se listan todos,
@@ -587,6 +606,32 @@
       opacity: 1;
       transform: translateY(0);
     }
+    /* 🆕 : insignia de la cola de subidas en segundo plano — ver
+       encolarSubida()/procesarCola() en el script. Se queda visible
+       mientras haya subidas pendientes o con error; no bloquea nada,
+       solo informa. Tocarla reintenta las que tengan error. */
+    .queue-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border-radius: 2px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--black);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .04em;
+      cursor: default;
+    }
+    .queue-badge.queue-badge-error {
+      background: #FDECEA;
+      border-color: #F5C2BE;
+      color: #B3261E;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -655,6 +700,11 @@
       <h2 id="scanner-title">Escanear código</h2>
     </div>
     <div class="session-count" id="scanner-session-count" style="display:none"></div>
+    <!-- 🆕 : insignia de la cola de subidas en segundo plano. Ver
+         renderQueueBadge()/onQueueBadgeClick() más abajo. -->
+    <div class="queue-badge" id="queue-badge" style="display:none" onclick="onQueueBadgeClick()">
+      <span id="queue-badge-text"></span>
+    </div>
     <!-- 🆕 (20-ago): SOLO envío automático — palomita rápida en vez de la
          pantalla completa de "Listo". Ver mostrarPalomitaRapida(). -->
     <div class="quick-check-toast" id="quick-check-toast">✓&nbsp; Listo</div>
@@ -709,6 +759,22 @@
       <div class="ya-botones">
         <button class="btn-ya btn-ya-cancelar" onclick="scanAgainSameChannel()">Cancelar y seguir</button>
         <button class="btn-ya btn-ya-reemplazar" onclick="reemplazarEvidencia()">Reemplazar</button>
+      </div>
+    </div>
+    <!-- 🆕 (21-ago): SOLO envío — aviso cuando el pedido de esta etiqueta
+         ya se marcó como "Cancelado" en el Sheet de Ventas. Se muestra
+         ANTES de abrir la cámara (no la abre sola) para que la persona no
+         gaste tiempo fotografiando/empacando algo que ya no se debe
+         enviar. Se muestra desde onScanSuccess (buscar) y se resuelve en
+         continuarPeseACancelado_() más abajo. DEVOLUCIÓN no usa esto. -->
+    <div class="cancelado-banner" id="cancelado-banner" style="display:none">
+      <div class="cancelado-texto">
+        <strong>⚠ Esta orden está cancelada</strong>
+        <span>El Sheet de Ventas ya marca esta etiqueta como Cancelado.</span>
+      </div>
+      <div class="ya-botones">
+        <button class="btn-ya btn-ya-cancelar" onclick="scanAgainSameChannel()">Cancelar y seguir</button>
+        <button class="btn-ya btn-cancelado-continuar" onclick="continuarPeseACancelado_()">Continuar de todas formas</button>
       </div>
     </div>
     <!-- Indicador del modo activo -->
@@ -857,6 +923,12 @@ let yaTieneFotos     = 0;      // evidencias que ESTA etiqueta ya tenía guardad
 // usando Devolución (triggerPhoto()).
 let liveCameraStream = null;
 
+// 🆕 : cola de subidas en segundo plano (envío Y devolución) — ver
+// encolarSubida()/procesarCola() más abajo, junto a submitPhoto().
+let uploadQueue      = [];   // pendientes de subir, en orden (fila real, uno a la vez)
+let failedQueue      = [];   // agotaron reintentos automáticos — esperan que Elena toque el badge
+let queueWorkerBusy  = false;
+
 // Elena decidió reemplazar la evidencia anterior: se quita el aviso y aparece
 // el botón de foto. El backend sobreescribe la celda, así que a partir de aquí
 // las fotos viejas dejan de estar referenciadas en el Sheet.
@@ -864,6 +936,35 @@ function reemplazarEvidencia() {
   document.getElementById('ya-banner').style.display = 'none';
   document.getElementById('photo-btn').style.display = '';
   yaTieneFotos = 0;
+}
+// 🆕 (21-ago): saca a función aparte el aviso de "ya tiene fotos" que
+// antes solo vivía inline en onScanSuccess — así lo puede reusar tanto
+// el flujo normal como continuarPeseACancelado_() (cuando alguien decide
+// fotografiar de todas formas un pedido cancelado). No cambia en nada
+// el comportamiento que ya existía, solo mueve el código.
+function mostrarAvisoSiYaTieneFotos_() {
+  const yaBanner = document.getElementById('ya-banner');
+  if (yaTieneFotos > 0) {
+    document.getElementById('ya-detalle').textContent =
+      'Tiene ' + yaTieneFotos + (yaTieneFotos === 1 ? ' foto guardada' : ' fotos guardadas') +
+      '. Si tomas nuevas, se reemplazan.';
+    yaBanner.style.display = 'flex';
+    // Se esconde el botón de foto: primero decide, luego fotografía.
+    document.getElementById('photo-btn').style.display = 'none';
+  } else {
+    yaBanner.style.display = 'none';
+    document.getElementById('photo-btn').style.display = '';
+  }
+}
+// 🆕 (21-ago): SOLO envío — botón "Continuar de todas formas" del aviso
+// de orden cancelada. Recién aquí se abre la cámara en vivo (antes no se
+// abrió sola) y se revisa "ya tiene fotos" — igual que el flujo normal,
+// nada más que pospuesto hasta que la persona confirma que sí quiere
+// seguir con un pedido cancelado.
+function continuarPeseACancelado_() {
+  document.getElementById('cancelado-banner').style.display = 'none';
+  abrirCamaraViva();
+  mostrarAvisoSiYaTieneFotos_();
 }
 let currentMode      = 'envio';   // 'envio' | 'devolucion'
 let currentCondition = null;      // 'Buen Estado' | 'Merma' — solo devolución
@@ -1461,6 +1562,7 @@ async function onScanSuccess(raw) {
         // pantalla si el escaneo ANTERIOR (de otra etiqueta) sí las tenía.
         yaTieneFotos = 0;
         document.getElementById('ya-banner').style.display = 'none';
+        document.getElementById('cancelado-banner').style.display = 'none';
         document.getElementById('photo-btn').style.display = '';
       } else {
         currentEnvioData = null;   // ya es un registro EXISTENTE, no un cruce con Ventas
@@ -1496,32 +1598,33 @@ async function onScanSuccess(raw) {
         // cámara ya está lista para tomar la foto en cuanto se llega a
         // esta pantalla. DEVOLUCIÓN no se toca, sigue viendo todo el
         // detalle como siempre y usando su cámara nativa de siempre.
+        // 🆕 (21-ago): SOLO envío — si el Sheet de Ventas ya marca esta
+        // orden como "Cancelado", no se abre la cámara sola: se muestra
+        // el aviso rojo (cancelado-banner) y se espera a que la persona
+        // decida (ver continuarPeseACancelado_() más abajo, que es la
+        // que de verdad abre la cámara y revisa "ya tiene fotos" si
+        // decide seguir de todas formas).
+        const esEnvioCancelado = (currentMode === 'envio' && data.status === 'Cancelado');
+
         if (currentMode === 'envio') {
           document.getElementById('found-card').style.display = 'none';
           document.getElementById('found-mode-indicator').style.display = 'none';
           document.getElementById('info-catalog-photo').style.display = 'none';
-          abrirCamaraViva();
+          if (esEnvioCancelado) {
+            document.getElementById('cancelado-banner').style.display = 'flex';
+            document.getElementById('ya-banner').style.display = 'none';
+            document.getElementById('photo-btn').style.display = 'none';
+          } else {
+            document.getElementById('cancelado-banner').style.display = 'none';
+            abrirCamaraViva();
+            mostrarAvisoSiYaTieneFotos_();
+          }
         } else {
+          document.getElementById('cancelado-banner').style.display = 'none';
           document.getElementById('found-card').style.display = '';
           document.getElementById('found-mode-indicator').style.display = '';
           cerrarCamaraViva();
-        }
-
-        // ¿Ya se le tomó foto a esta etiqueta? Al guardar, las fotos nuevas
-        // reemplazan a las viejas — así que se le avisa ANTES de que gaste el
-        // tiempo fotografiando, y ella decide: reemplazar, o cancelar y pasar
-        // al siguiente paquete.
-        const yaBanner = document.getElementById('ya-banner');
-        if (yaTieneFotos > 0) {
-          document.getElementById('ya-detalle').textContent =
-            'Tiene ' + yaTieneFotos + (yaTieneFotos === 1 ? ' foto guardada' : ' fotos guardadas') +
-            '. Si tomas nuevas, se reemplazan.';
-          yaBanner.style.display = 'flex';
-          // Se esconde el botón de foto: primero decide, luego fotografía.
-          document.getElementById('photo-btn').style.display = 'none';
-        } else {
-          yaBanner.style.display = 'none';
-          document.getElementById('photo-btn').style.display = '';
+          mostrarAvisoSiYaTieneFotos_();
         }
 
         // (items ya se calculó arriba)
@@ -1705,6 +1808,7 @@ async function buscarPorSufijoManual(sufijo) {
 
     yaTieneFotos = 0;
     document.getElementById('ya-banner').style.display = 'none';
+    document.getElementById('cancelado-banner').style.display = 'none';
     document.getElementById('photo-btn').style.display = '';
 
     clearPhotos();
@@ -1891,8 +1995,16 @@ function compressImage(file) {
   });
 }
 
-/* ── Subir evidencia ───────────────────────────────────────── */
-async function submitPhoto() {
+/* ── Subir evidencia — en segundo plano, en fila ──────────────
+   🆕 : antes, "Enviar evidencia" se quedaba esperando a que Drive/Sheets
+   respondieran para poder seguir escaneando (screen-uploading bloqueaba
+   todo). Ahora, en cuanto se toca el botón, la evidencia se mete a una
+   cola (uploadQueue) y se regresa a escanear DE INMEDIATO — tanto en
+   envío como en devolución. Un solo "worker" (procesarCola) va tomando
+   la cola una por una, EN FILA, y las manda al backend en segundo plano;
+   el badge de arriba de la cámara (#queue-badge) avisa cuántas van
+   pendientes o si alguna necesita atención, sin trabar el escaneo. ── */
+function submitPhoto() {
   const n = currentPhotos.length;
   if (!n) { alert('Primero toma al menos una foto.'); return; }
   // En devolución es obligatorio elegir Buen Estado o Merma antes de enviar.
@@ -1901,89 +2013,145 @@ async function submitPhoto() {
     return;
   }
 
-  document.getElementById('uploading-subtitle').textContent =
-    n === 1 ? 'Subiendo evidencia a Drive...' : 'Subiendo ' + n + ' fotos a Drive...';
-  showScreen('screen-uploading');
-
-  const payload = JSON.stringify({
+  // Se arma el payload ANTES de tocar nada de currentX — scanAgainSameChannel()
+  // resetea currentTracking/currentRow/currentRows/currentCondition/currentEnvioData
+  // y clearPhotos() reasigna currentPhotos a un arreglo nuevo, así que esta
+  // copia (.slice()) queda intacta pase lo que pase después.
+  const payload = {
     tracking:  currentTracking,
     channel:   currentChannel,
-    row:       currentRow,     // 0 = nueva entrada en devolución
-    rows:      currentRows,    // todas las filas del paquete (Pack de ML)
-    photos:    currentPhotos,  // todas las fotos de esta etiqueta
+    row:       currentRow,           // 0 = nueva entrada en devolución
+    rows:      currentRows.slice(),  // todas las filas del paquete (Pack de ML)
+    photos:    currentPhotos.slice(),// todas las fotos de esta etiqueta
     mode:      currentMode,
     condition: currentMode === 'devolucion' ? currentCondition : '',  // 'Buen Estado' | 'Merma' — solo devolución
     // 🆕 (13-ago): SKU/Cantidad/Pedido/Remisión ya cruzados con Ventas (solo
     // aplica cuando currentRow === 0, o sea "Nueva devolución") — así el
     // backend los guarda en el Sheet en vez de dejarlos en blanco.
     envioData: (currentMode === 'devolucion' && currentRow === 0) ? currentEnvioData : null
-  });
+  };
 
+  encolarSubida(payload);
+  sessionCount++;                 // cuenta al escanear, no al confirmar — la confirmación real la da el badge
+  renderSession();
+  clearPhotos();
+  cancelAutoAdvance();
+  scanAgainSameChannel();
+  mostrarPalomitaRapida();
+}
+
+/* ── Cola de subidas: persistencia, worker y badge ────────────
+   uploadQueue  → esperando su turno o reintentando (fallas de red se
+                  reintentan solas, con espera creciente).
+   failedQueue  → ya agotaron los reintentos automáticos; se quedan
+                  visibles en el badge (rojo) hasta que Elena lo toque,
+                  nunca se descartan solas — la evidencia no se pierde.
+   Todo se guarda en localStorage por si se cierra la pestaña con algo
+   pendiente; al volver a abrir, guardarCola()/init retoma la cola. ── */
+const UPLOAD_QUEUE_STORAGE_KEY = 'scannerUploadQueueV1';
+const UPLOAD_MAX_REINTENTOS    = 5;
+
+function guardarColaEnStorage_() {
   try {
-    const res  = await fetch(APPS_SCRIPT_URL, { method: 'POST', redirect: 'follow', body: payload });
-    const data = await res.json();
-    if (data.success) {
-      sessionCount++;               // una etiqueta más vaciada de este canal
-
-      // 🆕 (20-ago): ENVÍO automático — ya no se arma ni se muestra la
-      // pantalla "Listo" (con tracking/remisión/botones): se ve una
-      // palomita chiquita arriba de la cámara y se regresa a escanear
-      // DE INMEDIATO, sin esperar nada. DEVOLUCIÓN se queda exactamente
-      // igual que siempre — sí necesita esa pantalla (Merma, botones de
-      // salida, etc.), así que ni se toca.
-      if (currentMode === 'envio') {
-        renderSession();
-        clearPhotos();
-        cancelAutoAdvance();
-        scanAgainSameChannel();
-        mostrarPalomitaRapida();
-        return;
-      }
-
-      const fotos = (data.fotos || n);
-      const linea = fotos === 1
-        ? 'Foto guardada en Drive ✓'
-        : fotos + ' fotos guardadas en Drive ✓';
-
-      document.getElementById('success-tracking').textContent = currentTracking;
-      document.getElementById('success-subtitle').innerHTML =
-        currentMode === 'devolucion'
-          ? (currentRow === 0
-              ? 'Devolución registrada en el Sheet ✓<br>' + linea
-              : 'Estado → Revisada en el Sheet ✓<br>' + linea)
-          : 'Estado → Listo en el Sheet ✓<br>' + linea;
-
-      // Avance de Remisión (ML y TikTok, solo envío) — el backend solo lo
-      // manda cuando la etiqueta pertenece a una remisión; si no, se oculta.
-      const remisionEl = document.getElementById('success-remision');
-      if (data.remisionInfo) {
-        const r = data.remisionInfo;
-        remisionEl.textContent = (r.faltan === 0)
-          ? '✔ Remisión ' + r.remision + ' completa (' + r.total + '/' + r.total + ')'
-          : 'Remisión ' + r.remision + ' · ' + r.hechas + ' de ' + r.total + ' · faltan ' + r.faltan;
-        remisionEl.classList.toggle('completa', r.faltan === 0);
-        remisionEl.style.display = 'block';
-      } else {
-        remisionEl.style.display = 'none';
-        remisionEl.classList.remove('completa');
-      }
-
-      renderSession();
-      clearPhotos();
-      showScreen('screen-success');
-    } else {
-      throw new Error(data.error || 'Error en el servidor');
-    }
-  } catch (err) {
-    // Las fotos NO se pierden: regresa a la pantalla del pedido con las
-    // miniaturas intactas para que solo vuelva a presionar Enviar.
-    alert('Error al subir la evidencia:\n' + err.message + '\n\nTus fotos siguen aquí — intenta enviar de nuevo.');
-    showScreen('screen-found');
+    localStorage.setItem(UPLOAD_QUEUE_STORAGE_KEY, JSON.stringify({ uploadQueue, failedQueue }));
+  } catch (e) {
+    // localStorage lleno o no disponible: no truena el flujo, solo no persiste.
+    console.warn('No se pudo guardar la cola de subidas:', e);
   }
+}
+
+function cargarColaDeStorage_() {
+  try {
+    const raw = localStorage.getItem(UPLOAD_QUEUE_STORAGE_KEY);
+    if (!raw) return;
+    const datos = JSON.parse(raw);
+    uploadQueue = Array.isArray(datos.uploadQueue) ? datos.uploadQueue : [];
+    failedQueue = Array.isArray(datos.failedQueue) ? datos.failedQueue : [];
+  } catch (e) {
+    uploadQueue = [];
+    failedQueue = [];
+  }
+}
+
+function encolarSubida(payload) {
+  uploadQueue.push({ payload: payload, intentos: 0, error: null });
+  guardarColaEnStorage_();
+  renderQueueBadge();
+  procesarCola();
+}
+
+// El worker: SIEMPRE uno a la vez, en el orden en que se escaneó — "en
+// fila", tal cual, nunca en paralelo (evita saturar el Apps Script y
+// mantiene el orden de las filas del Sheet predecible).
+async function procesarCola() {
+  if (queueWorkerBusy) return;
+  queueWorkerBusy = true;
+  while (uploadQueue.length > 0) {
+    const item = uploadQueue[0];
+    try {
+      const res  = await fetch(APPS_SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify(item.payload) });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Error en el servidor');
+      uploadQueue.shift();
+      guardarColaEnStorage_();
+      renderQueueBadge();
+    } catch (err) {
+      item.intentos++;
+      item.error = (err && err.message) ? err.message : 'Error de red';
+      if (item.intentos >= UPLOAD_MAX_REINTENTOS) {
+        // Se agotaron los reintentos automáticos: se saca de la fila activa
+        // y se deja marcada en failedQueue para reintento manual (toque del
+        // badge) — así una etiqueta con problema no traba a las demás.
+        uploadQueue.shift();
+        failedQueue.push(item);
+      }
+      guardarColaEnStorage_();
+      renderQueueBadge();
+      if (item.intentos < UPLOAD_MAX_REINTENTOS) {
+        // Espera creciente antes de reintentar la misma (2s, 4s, 6s, 8s...).
+        await new Promise(function (r) { setTimeout(r, Math.min(2000 * item.intentos, 10000)); });
+      }
+    }
+  }
+  queueWorkerBusy = false;
+}
+
+function renderQueueBadge() {
+  const el  = document.getElementById('queue-badge');
+  const txt = document.getElementById('queue-badge-text');
+  if (!el || !txt) return;
+  const pendientes = uploadQueue.length;
+  const fallidos   = failedQueue.length;
+  if (!pendientes && !fallidos) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.classList.toggle('queue-badge-error', fallidos > 0);
+  if (fallidos > 0) {
+    txt.textContent = '⚠️ ' + fallidos + (fallidos === 1 ? ' evidencia con error — toca para reintentar' : ' evidencias con error — toca para reintentar');
+  } else {
+    txt.textContent = '📤 ' + pendientes + (pendientes === 1 ? ' evidencia subiendo…' : ' evidencias en fila…');
+  }
+}
+
+// Tocar el badge SOLO hace algo si hay fallidas: las regresa a la fila
+// normal para reintentarlas. Mientras solo hay pendientes normales, no
+// hace falta tocar nada — se están subiendo solas.
+function onQueueBadgeClick() {
+  if (!failedQueue.length) return;
+  failedQueue.forEach(function (item) { item.intentos = 0; item.error = null; }); // reintento manual: cuenta desde cero
+  uploadQueue = uploadQueue.concat(failedQueue);
+  failedQueue = [];
+  guardarColaEnStorage_();
+  renderQueueBadge();
+  procesarCola();
 }
 
 /* ── Init ──────────────────────────────────────────────────── */
 loadCounts(); // conteo del día visible desde que abre la app en Home
+// 🆕 : si se cerró la pestaña/app con evidencias sin terminar de subir,
+// se retoman solas al volver a abrir — nada se pierde por cerrar de más.
+cargarColaDeStorage_();
+renderQueueBadge();
+procesarCola();
 </script>
 </body>
 </html>

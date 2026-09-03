@@ -834,6 +834,21 @@
     <div class="condition-toggle" id="condition-toggle" style="display:none">
       <button type="button" class="condition-btn" id="cond-bueno" onclick="setCondition('Buen Estado')">✅ Buen estado</button>
       <button type="button" class="condition-btn" id="cond-merma" onclick="setCondition('Merma')">⚠️ Merma</button>
+      <!-- 🆕 (03-sep): llegó un producto distinto al del pedido — no es daño
+           (Merma) ni está bien (Buen Estado), así que NO debe entrar a la
+           categorización de Merma del Tablero de Mon (ver backend). -->
+      <button type="button" class="condition-btn" id="cond-noproducto" onclick="setCondition('No es el producto')">❌ No es el producto</button>
+    </div>
+    <!-- 🆕 (03-sep): comentario opcional — solo en modo Devolución. Para
+         casos que no encajan limpio en ninguna de las 3 condiciones de
+         arriba pero que sí hace falta anotar junto con la devolución (ej.
+         "llegó en buen estado pero sucio", "le falta metraje a un piso"). -->
+    <div class="comment-box" id="comment-box" style="display:none; margin:0 0 10px">
+      <label for="comment-input" class="subtitle" style="font-size:13px; display:block; margin:0 0 6px; text-align:left">
+        Comentario (opcional)
+      </label>
+      <textarea id="comment-input" placeholder="Ej. llegó en buen estado pero sucio, le falta metraje..."
+                rows="2" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:15px; font-family:inherit; resize:vertical; box-sizing:border-box"></textarea>
     </div>
     <!-- Fotos tomadas para ESTA etiqueta (etiqueta, caja, pedido… las que hagan falta) -->
     <p class="photo-count" id="photo-count" style="display:none"></p>
@@ -967,7 +982,7 @@ function continuarPeseACancelado_() {
   mostrarAvisoSiYaTieneFotos_();
 }
 let currentMode      = 'envio';   // 'envio' | 'devolucion'
-let currentCondition = null;      // 'Buen Estado' | 'Merma' — solo devolución
+let currentCondition = null;      // 'Buen Estado' | 'Merma' | 'No es el producto' — solo devolución
 
 // 🆕 (17-ago): temporizador del auto-avance en ENVÍO (ver submitPhoto()).
 // Se cancela si la persona sale manualmente (Terminar canal / Escanear
@@ -1330,6 +1345,7 @@ function setCondition(value) {
   currentCondition = value;
   document.getElementById('cond-bueno').classList.toggle('active', value === 'Buen Estado');
   document.getElementById('cond-merma').classList.toggle('active', value === 'Merma');
+  document.getElementById('cond-noproducto').classList.toggle('active', value === 'No es el producto');
 }
 
 /* ── Limpieza del código escaneado ─────────────────────────── */
@@ -1670,8 +1686,15 @@ async function onScanSuccess(raw) {
       currentCondition = null;
       document.getElementById('cond-bueno').classList.remove('active');
       document.getElementById('cond-merma').classList.remove('active');
+      document.getElementById('cond-noproducto').classList.remove('active');
       document.getElementById('condition-toggle').style.display =
         (currentMode === 'devolucion') ? 'flex' : 'none';
+
+      // 🆕 (03-sep): comentario opcional — mismo criterio de visibilidad
+      // que el selector de condición, y se limpia en cada etiqueta nueva.
+      document.getElementById('comment-input').value = '';
+      document.getElementById('comment-box').style.display =
+        (currentMode === 'devolucion') ? 'block' : 'none';
 
       // Fotos: empezamos de cero para cada etiqueta nueva
       clearPhotos();
@@ -1753,6 +1776,28 @@ async function buscarPorSufijoManual(sufijo) {
       return;
     }
 
+    // 🆕 (03-sep): esta devolución YA se había registrado antes (se busca
+    // por los mismos 6 dígitos, pero en Devoluciones, no en Ventas) — se
+    // avisa claro para que no se repita/duplique, en vez de dejar que
+    // parezca "no encontrado" y se vuelva a dar de alta.
+    if (data.yaRegistrada) {
+      const ex = data.existente || null;
+      if (ex) {
+        const detalles = [];
+        if (ex.estado)  detalles.push('Condición: ' + ex.estado);
+        if (ex.fecha)   detalles.push('Fecha: ' + ex.fecha);
+        if (ex.sku)     detalles.push('SKU: ' + ex.sku);
+        if (ex.pedido)  detalles.push('Pedido: ' + ex.pedido);
+        if (ex.fotos != null) detalles.push('Fotos guardadas: ' + ex.fotos);
+        alert('✅ Esta devolución YA se registró — no hace falta repetirla.\n\n' + detalles.join('\n'));
+      } else {
+        const count = (data.envioData && data.envioData.count) || '2+';
+        alert('✅ Esta devolución YA parece estar registrada (' + count + ' coincidencia(s) con esos 6 dígitos en Devoluciones).\nVerifica en el Sheet antes de repetirla.');
+      }
+      scanAgainSameChannel();
+      return;
+    }
+
     const envioData = data.envioData || null;
     if (envioData && envioData.ambiguous) {
       alert('Encontramos ' + envioData.count + ' coincidencias con esos 6 dígitos en Ventas.\nNo se puede saber cuál es — verifica el pedido a mano.');
@@ -1804,7 +1849,14 @@ async function buscarPorSufijoManual(sufijo) {
     currentCondition = null;
     document.getElementById('cond-bueno').classList.remove('active');
     document.getElementById('cond-merma').classList.remove('active');
+    document.getElementById('cond-noproducto').classList.remove('active');
     document.getElementById('condition-toggle').style.display = 'flex';
+
+    // 🆕 (03-sep): comentario opcional — este bloque es el de la
+    // devolución nueva encontrada a mano, siempre es devolución, así que
+    // se muestra igual que el selector de condición.
+    document.getElementById('comment-input').value = '';
+    document.getElementById('comment-box').style.display = 'block';
 
     yaTieneFotos = 0;
     document.getElementById('ya-banner').style.display = 'none';
@@ -2009,7 +2061,7 @@ function submitPhoto() {
   if (!n) { alert('Primero toma al menos una foto.'); return; }
   // En devolución es obligatorio elegir Buen Estado o Merma antes de enviar.
   if (currentMode === 'devolucion' && !currentCondition) {
-    alert('Selecciona si el producto llegó en Buen Estado o en Merma antes de enviar.');
+    alert('Selecciona la condición del producto (Buen Estado, Merma o No es el producto) antes de enviar.');
     return;
   }
 
@@ -2024,7 +2076,13 @@ function submitPhoto() {
     rows:      currentRows.slice(),  // todas las filas del paquete (Pack de ML)
     photos:    currentPhotos.slice(),// todas las fotos de esta etiqueta
     mode:      currentMode,
-    condition: currentMode === 'devolucion' ? currentCondition : '',  // 'Buen Estado' | 'Merma' — solo devolución
+    condition: currentMode === 'devolucion' ? currentCondition : '',  // 'Buen Estado' | 'Merma' | 'No es el producto' — solo devolución
+    // 🆕 (03-sep): comentario opcional — solo devolución, nunca obligatorio.
+    // Se lee aquí, ANTES de que scanAgainSameChannel()/clearPhotos() hagan
+    // nada, así que esta copia queda correcta pase lo que pase después.
+    comentario: currentMode === 'devolucion'
+      ? (document.getElementById('comment-input').value || '').trim()
+      : '',
     // 🆕 (13-ago): SKU/Cantidad/Pedido/Remisión ya cruzados con Ventas (solo
     // aplica cuando currentRow === 0, o sea "Nueva devolución") — así el
     // backend los guarda en el Sheet en vez de dejarlos en blanco.

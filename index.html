@@ -725,7 +725,7 @@
       ⌨️&nbsp; No pude escanear — buscar a mano
     </button>
     <div class="manual-entry-box" id="manual-entry-scanner-box" style="display:none; margin-top:10px">
-      <p class="subtitle" style="font-size:13px; margin:4px 0 8px">
+      <p class="subtitle" style="font-size:13px; margin:4px 0 8px" id="manual-scan-txt">
         Escribe los últimos 6 dígitos del código de Ventas:
       </p>
       <div style="display:flex; gap:8px">
@@ -1154,8 +1154,15 @@ async function startScanner() {
       ? 'Escanea el código\nde la devolución'
       : 'Apunta a cualquier código\nde la etiqueta';
   // 🆕 (17-ago): botón de "buscar a mano" — SOLO aplica a devolución.
+  // (15-sep): tambien en ENVIO Walmart — la etiqueta FedEx trae el TRK# impreso
+  // enorme (5197 5021 2862); si la camara no logra leer el Code128, se captura.
+  const manualWalmart = (currentMode === 'envio' && currentChannel === 'walmart');
   document.getElementById('manual-scan-btn').style.display =
-    (currentMode === 'devolucion') ? '' : 'none';
+    (currentMode === 'devolucion' || manualWalmart) ? '' : 'none';
+  document.getElementById('manual-scan-txt').textContent = manualWalmart
+    ? 'Escribe el TRK# de FedEx (12 digitos, viene impreso grande en la etiqueta):'
+    : 'Escribe los ultimos 6 digitos del codigo de Ventas:';
+  document.getElementById('manual-digits-scanner-input').placeholder = manualWalmart ? 'Ej. 519750212862' : 'Ultimos 6 digitos';
   document.getElementById('manual-entry-scanner-box').style.display = 'none';
   document.getElementById('manual-digits-scanner-input').value = '';
   renderSession();
@@ -1213,7 +1220,12 @@ async function startScanner() {
       // CON correccion de errores — se reconstruye aunque este impreso regular —
       // y trae el mismo tracking adentro (campo 31Z…). Code128 queda de respaldo
       // (con digito verificador + doble lectura).
-      (currentChannel === 'walmart' && currentMode === 'envio') ? [11, 5] :  // PDF417 + Code128 (FedEx)
+      // (v4): PDF417 [11] se PROBO y se QUITO — en el celular el lector de PDF417
+      // de html5-qrcode es tan pesado por cuadro que la camara se queda
+      // congelada sin decodificar nada (probado en vivo 15-sep 12:00). Solo
+      // Code128 + verificador + doble lectura, y captura manual del TRK# de
+      // respaldo (ver manual-scan-btn / buscarManualDesdeScanner).
+      (currentChannel === 'walmart' && currentMode === 'envio') ? [5]   :   // solo Code128 (FedEx)
       (currentChannel === 'ml'     && currentMode === 'envio') ? [5, 0] :   // Code128 + QR
       (currentChannel === 'tiktok' && currentMode === 'envio') ? [0]    :   // solo QR (IM+14)
       (currentChannel === 'shein'  && currentMode === 'envio') ? [0, 5] :   // QR + Code128
@@ -1252,12 +1264,9 @@ async function startScanner() {
     // "cámara de código de barras" y cuesta encuadrarlo → ventana cuadrada.
     const esTikTok = (currentChannel === 'tiktok' && currentMode === 'envio');
     const esShein  = (currentChannel === 'shein'  && currentMode === 'envio');
-    const esWalmart = (currentChannel === 'walmart' && currentMode === 'envio');
     const qrbox = (comboSheinTiktok || esTikTok || esShein)
       ? { width: 250, height: 250 }   // QR cuadrado
-      : esWalmart
-      ? { width: 300, height: 160 }   // (15-sep) PDF417 de FedEx: ancho y ~1 cm de alto
-      : { width: 300, height: 120 };  // barras apiladas (DHL / Code128)
+      : { width: 300, height: 120 };  // barras apiladas (DHL / Code128 / FedEx)
     // 🚀 Velocidad (28-jul): disableFlip para TODOS los canales, no solo
     // TikTok. Por cada cuadro de cámara, la librería probaba el cuadro TAL
     // CUAL y además su versión "espejo" (volteada horizontalmente) — el
@@ -1823,6 +1832,17 @@ function toggleManualScannerBox() {
 }
 
 async function buscarManualDesdeScanner() {
+  // (15-sep): ENVIO Walmart — el TRK# tecleado (12 digitos, con verificador)
+  // entra al MISMO flujo que un escaneo bueno (onScanSuccess), sin pasar por
+  // la doble lectura. Nada de esto toca devolucion.
+  if (currentMode === 'envio' && currentChannel === 'walmart') {
+    const trk = String(document.getElementById('manual-digits-scanner-input').value || '').replace(/\D/g, '');
+    if (!fedexCheckOk(trk)) { alert('Ese TRK# no cuadra (12 digitos, revisa que esten bien). Ej. 519750212862'); return; }
+    document.getElementById('manual-entry-scanner-box').style.display = 'none';
+    ultimaLecturaWalmart = trk;   // ya confirmado a mano: pasa la doble lectura directo
+    await onScanSuccess(trk);
+    return;
+  }
   const sufijo = limpiarCodigo(document.getElementById('manual-digits-scanner-input').value || '');
   if (!sufijo) { alert('Escribe los últimos 6 dígitos del código.'); return; }
   scanning = true;

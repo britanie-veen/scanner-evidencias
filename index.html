@@ -1206,7 +1206,14 @@ async function startScanner() {
       // 12 = TRK# impreso = "Numero De Rastreo" en Ventas) y un Code128 chico
       // abajo que solo dice "1" (numero de carton - distractor). Solo Code128:
       // el PDF417 ni se intenta y el "1" se descarta en esCodigoInservible.
-      (currentChannel === 'walmart' && currentMode === 'envio') ? [5]   :   // solo Code128 (FedEx)
+      // (15-sep v3): PDF417 [11] PRIMERO. En vivo, el Code128 de 34 digitos se
+      // leyo MAL 3 veces seguidas (309750212862, 019750072562, 309705212262 en
+      // vez de 519750212862): la etiqueta viene como imagen y las barras finas
+      // se empastan al imprimir. El PDF417 (bloque cuadriculado de arriba) es 2D
+      // CON correccion de errores — se reconstruye aunque este impreso regular —
+      // y trae el mismo tracking adentro (campo 31Z…). Code128 queda de respaldo
+      // (con digito verificador + doble lectura).
+      (currentChannel === 'walmart' && currentMode === 'envio') ? [11, 5] :  // PDF417 + Code128 (FedEx)
       (currentChannel === 'ml'     && currentMode === 'envio') ? [5, 0] :   // Code128 + QR
       (currentChannel === 'tiktok' && currentMode === 'envio') ? [0]    :   // solo QR (IM+14)
       (currentChannel === 'shein'  && currentMode === 'envio') ? [0, 5] :   // QR + Code128
@@ -1245,8 +1252,11 @@ async function startScanner() {
     // "cámara de código de barras" y cuesta encuadrarlo → ventana cuadrada.
     const esTikTok = (currentChannel === 'tiktok' && currentMode === 'envio');
     const esShein  = (currentChannel === 'shein'  && currentMode === 'envio');
+    const esWalmart = (currentChannel === 'walmart' && currentMode === 'envio');
     const qrbox = (comboSheinTiktok || esTikTok || esShein)
       ? { width: 250, height: 250 }   // QR cuadrado
+      : esWalmart
+      ? { width: 300, height: 160 }   // (15-sep) PDF417 de FedEx: ancho y ~1 cm de alto
       : { width: 300, height: 120 };  // barras apiladas (DHL / Code128)
     // 🚀 Velocidad (28-jul): disableFlip para TODOS los canales, no solo
     // TikTok. Por cada cuadro de cámara, la librería probaba el cuadro TAL
@@ -1391,6 +1401,14 @@ function limpiarCodigo(raw) {
   // aqui tambien para que la pantalla muestre el numero corto, no los 34.
   const fx  = txt.match(/^\d{22}(\d{12})$/);
   if (fx) return fx[1];
+  // (15-sep v3): PDF417 de FedEx — el texto trae muchos campos separados por
+  // caracteres de control (ya quitados arriba). El tracking viene dos veces:
+  // en '31Z' + 34 digitos (los ultimos 12 = TRK#) y como 12 digitos + '0455'
+  // antes de 'FDE'. Se usa el primero; el segundo es respaldo.
+  const p1  = txt.match(/31Z\d{22}(\d{12})/);
+  if (p1) return p1[1];
+  const p2  = txt.match(/(\d{12})\d{4}FDE/);
+  if (p2) return p2[1];
   return txt;
 }
 
@@ -1460,7 +1478,11 @@ async function onScanSuccess(raw) {
   // DOS veces seguidas antes de aceptarlo. A 24 cuadros/seg, en cuanto la
   // camara engancha bien, la segunda lectura llega en una fraccion de
   // segundo - no se nota; pero una lectura mala aislada nunca pasa sola.
-  if (currentChannel === 'walmart' && currentMode === 'envio') {
+  // (v3): si vino del PDF417 (tiene correccion de errores) no hace falta
+  // confirmar dos veces — se acepta directo. La doble lectura queda solo
+  // para el Code128.
+  const desdePdf417 = /\[\)>|31Z\d{22}/.test(String(raw || ''));
+  if (currentChannel === 'walmart' && currentMode === 'envio' && !desdePdf417) {
     if (ultimaLecturaWalmart !== tracking) {
       ultimaLecturaWalmart = tracking;
       document.getElementById('scan-hint-text').textContent = 'Leído ' + tracking + '… confirmando, no muevas el celular.';

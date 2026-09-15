@@ -929,6 +929,7 @@ let scanner          = null;
 let scannerFormatsKey = null;  // con qué formatos se construyó el 'scanner' actual — si cambia el canal
                                 // y necesita otros formatos, hay que RECREAR el objeto (ver startScanner)
 let scanning         = false;
+let ultimaLecturaWalmart = null;   // (15-sep): doble lectura Walmart, ver onScanSuccess
 let currentTracking  = null;
 let currentChannel   = null;   // canal activo (se queda fijo durante toda la sesión)
 let currentRow       = null;   // fila en el Sheet (0 = nueva entrada en devolución)
@@ -1403,12 +1404,28 @@ function limpiarCodigo(raw) {
 // Si la cámara agarra uno de los inservibles, NO tumbamos el escaneo: lo
 // ignoramos, avisamos en pantalla, y seguimos esperando el bueno. Así Elena
 // no se come un "no encontrada" que no era su culpa.
+function fedexCheckOk(t) {
+  if (!/^\d{12}$/.test(t)) return false;
+  const w = [3, 1, 7, 3, 1, 7, 3, 1, 7, 3, 1];
+  let suma = 0;
+  for (let i = 0; i < 11; i++) suma += (+t[i]) * w[i];
+  return (suma % 11) % 10 === +t[11];
+}
+
 function esCodigoInservible(codigo) {
   if (currentMode !== 'envio') return false;
   // (15-sep): Walmart - solo sirve el TRK# de 12 digitos (ya recortado por
   // limpiarCodigo). Cualquier otra cosa (el "1" del carton) se ignora y se
   // sigue escaneando, igual que el waybill en Amazon.
-  if (currentChannel === 'walmart') return !/^\d{12}$/.test(codigo);
+  // (15-sep, v2): ademas de 12 digitos, se valida el DIGITO VERIFICADOR de
+  // FedEx (el ultimo se calcula con los otros 11: pesos 3,1,7 repetidos,
+  // suma mod 11, mod 10). Confirmado en vivo con Britanie: la camara leyo
+  // 309750212862 y 019750072562 (mal) en vez de 519750212862 - el Code128
+  // de FedEx es largo (34 digitos) y la etiqueta viene como imagen
+  // escaneada, asi que a veces decodifica digitos equivocados. Las dos
+  // lecturas malas NO pasan el verificador; las buenas si. Si falla, se
+  // sigue escaneando en vez de mandar a 'No encontrada'.
+  if (currentChannel === 'walmart') return !/^\d{12}$/.test(codigo) || !fedexCheckOk(codigo);
   if (currentChannel !== 'amazon') return false;
   return !/^[A-Za-z][A-Za-z0-9]{8}$/.test(codigo);
 }
@@ -1431,9 +1448,25 @@ async function onScanSuccess(raw) {
   if (esCodigoInservible(tracking)) {
     // Sigue escaneando — no marcamos scanning = true ni paramos la cámara
     document.getElementById('scan-hint-text').textContent = (currentChannel === 'walmart')
-      ? 'Ese código no sirve.\nApunta al código de barras GRANDE de FedEx (el de en medio).'
+      ? (/^\d{12}$/.test(tracking)
+          ? 'Lectura con error (' + tracking + ').\nMantén el celular quieto y vuelve a apuntar al código grande.'
+          : 'Ese código no sirve.\nApunta al código de barras GRANDE de FedEx (el de en medio).')
       : 'Ese código no sirve (es de la paquetería).\nApunta al código de Amazon.';
     return;
+  }
+
+  // (15-sep, v2): WALMART - segunda defensa contra lecturas erroneas: el
+  // mismo codigo (ya validado con el digito verificador) se tiene que leer
+  // DOS veces seguidas antes de aceptarlo. A 24 cuadros/seg, en cuanto la
+  // camara engancha bien, la segunda lectura llega en una fraccion de
+  // segundo - no se nota; pero una lectura mala aislada nunca pasa sola.
+  if (currentChannel === 'walmart' && currentMode === 'envio') {
+    if (ultimaLecturaWalmart !== tracking) {
+      ultimaLecturaWalmart = tracking;
+      document.getElementById('scan-hint-text').textContent = 'Leído ' + tracking + '… confirmando, no muevas el celular.';
+      return;
+    }
+    ultimaLecturaWalmart = null;
   }
 
   // Etiqueta FBM: su referencia empieza con F (ej. Fr6wh21NN) y NO existe en

@@ -207,6 +207,7 @@
     .channel-tiktok { background: var(--black); color: var(--white); border: 1.5px dashed var(--white); }
     .channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
     .channel-amazon { background: var(--black); color: var(--white); letter-spacing: .06em; }
+    .channel-walmart { background: var(--white); color: var(--black); border: 1.5px double var(--black); letter-spacing: .04em; }
     /* ── Estado badge ──────────────────────────────────────── */
     /* ── Aviso de etiqueta ya fotografiada ────────────────────
        Al guardar, las fotos nuevas REEMPLAZAN a las anteriores.
@@ -377,6 +378,7 @@
     .channel-btn.channel-tiktok { background: var(--black); color: var(--white); outline: 1.5px dashed rgba(255,255,255,.5); outline-offset: -4px; }
     .channel-btn.channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
     .channel-btn.channel-amazon { background: var(--black); color: var(--white); letter-spacing: .08em; }
+    .channel-btn.channel-walmart { background: var(--white); color: var(--black); border: 3px double var(--black); letter-spacing: .06em; }
     /* 🚀 Combo (30-jul): SHEIN + TikTok en un solo modo — el backend detecta
        cuál de los dos es solo con la forma del código, así que no hace falta
        elegir canal ni terminar sesión para alternar entre los dos. */
@@ -650,6 +652,7 @@
         <span class="channel-badge channel-tiktok">TikTok</span>
         <span class="channel-badge channel-ml">ML</span>
         <span class="channel-badge channel-amazon">Amazon</span>
+        <span class="channel-badge channel-walmart">Walmart</span>
       </div>
       <p class="subtitle">Escanea la guía y registra<br>la evidencia en un paso</p>
     </div>
@@ -685,6 +688,9 @@
     <button class="channel-btn channel-tiktok" onclick="selectChannel('tiktok')">TikTok</button>
     <button class="channel-btn channel-ml"     onclick="selectChannel('ml')">Mercado Libre</button>
     <button class="channel-btn channel-amazon" onclick="selectChannel('amazon')">Amazon</button>
+    <!-- (15-sep): Walmart - primera venta 15-sep-2026. Etiqueta FedEx: se lee
+         SOLO el Code128 grande (34 digitos -> ultimos 12 = TRK#). Ver formatos/limpiarCodigo. -->
+    <button class="channel-btn channel-walmart" onclick="selectChannel('walmart')">Walmart</button>
     <!-- 🚀 Combo (30-jul): solo envío — devolución nunca muestra este botón
          (se oculta en startFlow()). Detecta SHEIN vs TikTok solo del código. -->
     <button class="channel-btn channel-combo" id="btn-combo-shein-tiktok" onclick="selectChannel('shein_tiktok')">
@@ -915,7 +921,8 @@ const CHANNEL_LABELS = {
   shein:  ['SHEIN',  'channel-shein'],
   tiktok: ['TIKTOK', 'channel-tiktok'],
   ml:     ['ML',     'channel-ml'],
-  amazon: ['AMAZON', 'channel-amazon']
+  amazon: ['AMAZON', 'channel-amazon'],
+  walmart: ['WALMART', 'channel-walmart']   // (15-sep)
 };
 
 let scanner          = null;
@@ -1029,7 +1036,7 @@ async function loadCounts() {
     );
     const data = await res.json();
     if (!data.counts) { el.textContent = ''; return; }
-    const order = ['temu', 'shein', 'tiktok', 'ml', 'amazon'];
+    const order = ['temu', 'shein', 'tiktok', 'ml', 'amazon', 'walmart'];
     const parts = order
       .filter(ch => data.counts[ch] !== undefined)
       .map(ch => (CHANNEL_LABELS[ch] ? CHANNEL_LABELS[ch][0] : ch.toUpperCase()) + ' ' + data.counts[ch]);
@@ -1192,6 +1199,13 @@ async function startScanner() {
     // los dos sin problema, apunte Elena a cualquiera de las dos etiquetas.
     const formatos = comboSheinTiktok ? [0, 5] :
       (currentChannel === 'amazon' && currentMode === 'envio') ? [5, 6] :   // Code128 + DataMatrix
+      // (15-sep): WALMART (envio) - etiqueta FedEx decodificada del PDF real del
+      // primer pedido (zxing): trae un PDF417 arriba (todo el envio, pesado de
+      // leer con celular), el Code128 GRANDE en medio (34 digitos, los ultimos
+      // 12 = TRK# impreso = "Numero De Rastreo" en Ventas) y un Code128 chico
+      // abajo que solo dice "1" (numero de carton - distractor). Solo Code128:
+      // el PDF417 ni se intenta y el "1" se descarta en esCodigoInservible.
+      (currentChannel === 'walmart' && currentMode === 'envio') ? [5]   :   // solo Code128 (FedEx)
       (currentChannel === 'ml'     && currentMode === 'envio') ? [5, 0] :   // Code128 + QR
       (currentChannel === 'tiktok' && currentMode === 'envio') ? [0]    :   // solo QR (IM+14)
       (currentChannel === 'shein'  && currentMode === 'envio') ? [0, 5] :   // QR + Code128
@@ -1370,7 +1384,13 @@ function limpiarCodigo(raw) {
   // match the expected pattern"), sin que se vea nada raro en pantalla.
   const txt = String(raw || '').replace(/[\x00-\x1F\x7F]/g, '').trim();
   const m   = txt.match(/^S([A-Za-z][A-Za-z0-9]{8})(?:_.*)?$/);
-  return m ? m[1] : txt;
+  if (m) return m[1];
+  // (15-sep): WALMART / FedEx - Code128 de 34 digitos: los ultimos 12 son el
+  // TRK# (519750212862). Mismo recorte que hace el backend (limpiarCodigo_),
+  // aqui tambien para que la pantalla muestre el numero corto, no los 34.
+  const fx  = txt.match(/^\d{22}(\d{12})$/);
+  if (fx) return fx[1];
+  return txt;
 }
 
 // Las etiquetas de Amazon traen VARIOS códigos de barras, y solo uno sirve:
@@ -1384,7 +1404,12 @@ function limpiarCodigo(raw) {
 // ignoramos, avisamos en pantalla, y seguimos esperando el bueno. Así Elena
 // no se come un "no encontrada" que no era su culpa.
 function esCodigoInservible(codigo) {
-  if (currentMode !== 'envio' || currentChannel !== 'amazon') return false;
+  if (currentMode !== 'envio') return false;
+  // (15-sep): Walmart - solo sirve el TRK# de 12 digitos (ya recortado por
+  // limpiarCodigo). Cualquier otra cosa (el "1" del carton) se ignora y se
+  // sigue escaneando, igual que el waybill en Amazon.
+  if (currentChannel === 'walmart') return !/^\d{12}$/.test(codigo);
+  if (currentChannel !== 'amazon') return false;
   return !/^[A-Za-z][A-Za-z0-9]{8}$/.test(codigo);
 }
 
@@ -1405,8 +1430,9 @@ async function onScanSuccess(raw) {
 
   if (esCodigoInservible(tracking)) {
     // Sigue escaneando — no marcamos scanning = true ni paramos la cámara
-    document.getElementById('scan-hint-text').textContent =
-      'Ese código no sirve (es de la paquetería).\nApunta al código de Amazon.';
+    document.getElementById('scan-hint-text').textContent = (currentChannel === 'walmart')
+      ? 'Ese código no sirve.\nApunta al código de barras GRANDE de FedEx (el de en medio).'
+      : 'Ese código no sirve (es de la paquetería).\nApunta al código de Amazon.';
     return;
   }
 

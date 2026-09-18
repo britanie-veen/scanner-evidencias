@@ -237,13 +237,37 @@
     text-transform: uppercase;
     color: var(--muted);
   }
-  /* 🆕 (18-sep): TABLERO DE TRÁFICO — desglose por canal, leído del backend
-     (?action=traficoCounts). A diferencia del contador de sesión (que vive
-     en memoria y se reinicia al recargar), estos NO se pierden: se guardan
-     por día en el servidor. Cada canal muestra "hoy" (grande) y "semana"
-     (de lunes a hoy, chiquito). El encabezado negro trae el total. */
+  /* 🆕 (18-sep): PESTAÑAS Escaneo / Tablero — para que el escaneo quede
+     limpio y el tablero viva en su propio apartado, sin amontonarse. */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  .tab {
+    flex: 1;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 12px;
+    border-radius: 2px;
+    border: 1.5px solid var(--black);
+    background: var(--white);
+    color: var(--black);
+    cursor: pointer;
+  }
+  .tab.active { background: var(--black); color: var(--white); }
+  .vista { width: 100%; display: flex; flex-direction: column; align-items: center; }
+
+  /* 🆕 (18-sep): TABLERO DE TRÁFICO — calendario semanal (Lun–Vie), por día
+     y canal, leído del backend (?action=traficoSemana). Navegable semana a
+     semana con ◀ ▶. Nada se borra: cada semana vive por su cuenta y el
+     lunes arranca en cero solito. El día de hoy va resaltado. */
   .tablero {
-    margin-top: 16px;
+    margin-top: 4px;
     width: 100%;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -254,57 +278,56 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 10px 12px;
     background: var(--black);
     color: var(--white);
   }
   .tablero-titulo {
     font-size: 12px;
     font-weight: 900;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-  }
-  .tablero-total {
-    font-size: 11px;
-    font-weight: 200;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.7);
-    text-align: right;
-  }
-  .tablero-total b { font-weight: 900; color: var(--white); }
-  .tablero-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
-    gap: 1px;
-    background: var(--border);
-  }
-  .canal-card {
-    background: var(--white);
-    padding: 14px 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-  .canal-nombre {
-    font-size: 10px;
-    font-weight: 900;
     letter-spacing: .08em;
     text-transform: uppercase;
-    color: var(--muted);
+    text-align: center;
+    flex: 1;
   }
-  .canal-hoy {
-    font-size: 26px;
+  .nav-btn {
+    background: rgba(255,255,255,.14);
+    color: var(--white);
+    border: none;
+    border-radius: 2px;
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nav-btn:disabled { opacity: .3; cursor: default; }
+  .tablero-body { width: 100%; overflow-x: auto; }
+  table.cal { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.cal th, table.cal td {
+    padding: 10px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.cal thead th {
+    font-size: 10px;
     font-weight: 900;
-    line-height: 1;
-  }
-  .canal-semana {
-    font-size: 9px;
-    font-weight: 200;
-    letter-spacing: .06em;
+    letter-spacing: .05em;
     text-transform: uppercase;
     color: var(--muted);
+    background: var(--surface);
+  }
+  table.cal td.dia { text-align: left; font-weight: 700; letter-spacing: .02em; }
+  table.cal td.tot, table.cal th.tot { font-weight: 900; background: var(--surface); }
+  table.cal td.cero { color: var(--muted); font-weight: 200; }
+  table.cal tr.hoy td { background: #FFF7E6; }
+  table.cal tr.hoy td.dia { color: var(--amber); }
+  table.cal tfoot td {
+    font-weight: 900;
+    background: var(--black);
+    color: var(--white);
+    border-bottom: none;
   }
   .historial {
     margin-top: 14px;
@@ -380,25 +403,39 @@
   <h1>Tráfico</h1>
   <p class="subtitle">Conecta tu pistola/escáner a esta computadora<br>y escanea el código de cada paquete.</p>
 
-  <input type="text" id="scan-input" autocomplete="off" autofocus placeholder="ESPERANDO ESCANEO...">
-
-  <div class="result-card" id="result-card">
-    <p class="placeholder">Aquí va apareciendo cada paquete escaneado</p>
+  <!-- Pestañas: Escaneo (limpio) / Tablero (calendario semanal) -->
+  <div class="tabs">
+    <button class="tab active" id="tab-escaneo" type="button">Escaneo</button>
+    <button class="tab" id="tab-tablero" type="button">Tablero</button>
   </div>
 
-  <div class="session-bar">
-    <span class="session-count" id="session-count">0</span>
-    <span class="session-label">escaneados en esta sesión</span>
-  </div>
-  <div class="tablero">
-    <div class="tablero-head">
-      <span class="tablero-titulo">Tablero de Tráfico</span>
-      <span class="tablero-total"><b id="tablero-total-hoy">—</b> hoy · <b id="tablero-total-semana">—</b> semana</span>
+  <!-- ═══ VISTA ESCANEO ═══ -->
+  <div id="vista-escaneo" class="vista">
+    <input type="text" id="scan-input" autocomplete="off" autofocus placeholder="ESPERANDO ESCANEO...">
+
+    <div class="result-card" id="result-card">
+      <p class="placeholder">Aquí va apareciendo cada paquete escaneado</p>
     </div>
-    <div class="tablero-grid" id="tablero-grid"></div>
+
+    <div class="session-bar">
+      <span class="session-count" id="session-count">0</span>
+      <span class="session-label">escaneados en esta sesión</span>
+    </div>
+    <div class="historial" id="historial">
+      <p class="historial-vacio">Aquí se va a ir llenando la lista de esta sesión</p>
+    </div>
   </div>
-  <div class="historial" id="historial">
-    <p class="historial-vacio">Aquí se va a ir llenando la lista de esta sesión</p>
+
+  <!-- ═══ VISTA TABLERO (calendario semanal Lun–Vie, navegable) ═══ -->
+  <div id="vista-tablero" class="vista" style="display:none;">
+    <div class="tablero">
+      <div class="tablero-head">
+        <button class="nav-btn" id="sem-prev" type="button">◀</button>
+        <span class="tablero-titulo" id="sem-titulo">Semana</span>
+        <button class="nav-btn" id="sem-next" type="button">▶</button>
+      </div>
+      <div class="tablero-body" id="tablero-body"></div>
+    </div>
   </div>
 </div>
 
@@ -443,72 +480,110 @@ const historialEl = document.getElementById('historial');
 // todas formas ya no es lo que se necesita revisar al momento.
 const HISTORIAL_MAX_FILAS = 300;
 
-// 🆕 (18-sep): totales GUARDADOS (por día) — se leen del backend con
-// ?action=traficoCounts. A diferencia del contador de sesión de arriba,
-// estos NO se pierden al recargar/cerrar la página: viven en el servidor.
-// Se cargan al abrir la pantalla, y suben en vivo con cada paquete nuevo
-// marcado como Entregado (sin volver a preguntarle al servidor cada vez).
-// Canales que se muestran en el Tablero de Tráfico, en este orden.
-// (Temu ya no es canal de CeroCero, por eso no está.)
+// 🆕 (18-sep): TABLERO DE TRÁFICO — calendario semanal (Lun–Vie) en su
+// propio apartado (pestaña "Tablero"). Los datos viven por día/canal en el
+// backend (?action=traficoSemana); nada se pierde al recargar y el lunes
+// arranca en cero solito. Se navega semana a semana con ◀ ▶.
+// Canales que se muestran, en este orden (Temu ya no es canal de CeroCero).
 const TRAFICO_CANALES = ['tiktok', 'ml', 'shein', 'amazon', 'walmart'];
-// Datos del tablero (por canal), traídos del backend. Empieza en null =
-// "todavía no cargan"; mientras tanto las tarjetas muestran 0.
-let tablero = null; // { hoy:{ch:n}, semana:{ch:n}, totalHoy, totalSemana }
+const MESES_ = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+let semanaOffset = 0;    // 0 = semana actual, -1 = la anterior, etc.
+let semanaData = null;   // respuesta de ?action=traficoSemana
 
-async function cargarTotales_() {
+// Lunes (a mediodía) de la semana desplazada `offset` semanas.
+function lunesDeSemana_(offset) {
+  const d = new Date();
+  const dow = (d.getDay() + 6) % 7;   // 0=lunes … 6=domingo
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() - dow + offset * 7);
+  return d;
+}
+function fechaKey_(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + dd;
+}
+function tituloSemana_(lunes) {
+  const vie = new Date(lunes);
+  vie.setDate(vie.getDate() + 4);
+  return 'Semana ' + lunes.getDate() + '–' + vie.getDate() + ' ' + MESES_[vie.getMonth()];
+}
+
+async function cargarSemana_() {
+  const lunes = lunesDeSemana_(semanaOffset);
+  const tit = document.getElementById('sem-titulo');
+  if (tit) tit.textContent = tituloSemana_(lunes);
+  const next = document.getElementById('sem-next');
+  if (next) next.disabled = (semanaOffset >= 0);   // no navegar al futuro
   try {
-    const res = await fetch(APPS_SCRIPT_URL + '?action=traficoCounts', { redirect: 'follow' });
-    const data = await res.json();
-    if (data && data.hoy) {
-      tablero = data;
-      renderTablero_();
-    }
+    const res = await fetch(APPS_SCRIPT_URL + '?action=traficoSemana&inicio=' + fechaKey_(lunes), { redirect: 'follow' });
+    semanaData = await res.json();
   } catch (err) {
-    // Si falla la carga, el tablero se queda como estaba y NO estorba el
-    // escaneo — el conteo real igual queda guardado en el backend.
+    semanaData = null;   // si falla, se muestra "sin datos" — no estorba el escaneo
   }
-}
-
-// Dibuja el tablero por canal desde `tablero`. Se llama al cargar y cada
-// vez que sube un conteo. Reconstruye la rejilla (son pocos canales, es
-// barato) para no depender de IDs por canal.
-function renderTablero_() {
-  const grid = document.getElementById('tablero-grid');
-  if (!grid) return;
-  const hoy    = (tablero && tablero.hoy)    || {};
-  const semana = (tablero && tablero.semana) || {};
-  grid.innerHTML = TRAFICO_CANALES.map(function (ch) {
-    return '<div class="canal-card">' +
-             '<div class="canal-nombre">' + (CHANNEL_LABELS[ch] || ch) + '</div>' +
-             '<div class="canal-hoy">' + (hoy[ch] || 0) + '</div>' +
-             '<div class="canal-semana">semana ' + (semana[ch] || 0) + '</div>' +
-           '</div>';
-  }).join('');
-  const th = document.getElementById('tablero-total-hoy');
-  const ts = document.getElementById('tablero-total-semana');
-  if (th) th.textContent = (tablero && tablero.totalHoy)    || 0;
-  if (ts) ts.textContent = (tablero && tablero.totalSemana) || 0;
-}
-
-// Sube +1 el canal indicado cuando se marca un paquete NUEVO como
-// Entregado (mismo criterio que el backend: solo si NO estaba entregado
-// antes). Si el tablero aún no cargó, no hace nada — al recargar se traen
-// los números reales del servidor.
-function sumarTotalLocal_(channel) {
-  if (!tablero) return;
-  if (!tablero.hoy)    tablero.hoy = {};
-  if (!tablero.semana) tablero.semana = {};
-  tablero.hoy[channel]    = (tablero.hoy[channel]    || 0) + 1;
-  tablero.semana[channel] = (tablero.semana[channel] || 0) + 1;
-  tablero.totalHoy    = (tablero.totalHoy    || 0) + 1;
-  tablero.totalSemana = (tablero.totalSemana || 0) + 1;
   renderTablero_();
 }
 
-// Dibuja el tablero vacío de una vez (0 en todo) y luego lo llena con los
-// datos reales del backend en cuanto llegan.
-renderTablero_();
-window.addEventListener('load', cargarTotales_);
+// Dibuja la tabla del calendario (días en filas, canales en columnas).
+function renderTablero_() {
+  const body = document.getElementById('tablero-body');
+  if (!body) return;
+  if (!semanaData || !semanaData.dias) {
+    body.innerHTML = '<p style="padding:16px;text-align:center;color:var(--muted);font-size:11px;">Sin datos</p>';
+    return;
+  }
+  let html = '<table class="cal"><thead><tr><th class="dia" style="text-align:left;">Día</th>';
+  TRAFICO_CANALES.forEach(function (ch) { html += '<th>' + (CHANNEL_LABELS[ch] || ch) + '</th>'; });
+  html += '<th class="tot">Total</th></tr></thead><tbody>';
+  semanaData.dias.forEach(function (d) {
+    const esHoy = (d.fecha === semanaData.hoy);
+    const diaNum = Number(d.fecha.split('-')[2]);
+    html += '<tr class="' + (esHoy ? 'hoy' : '') + '">';
+    html += '<td class="dia">' + d.nombre.slice(0, 3) + ' ' + diaNum + (esHoy ? ' · hoy' : '') + '</td>';
+    TRAFICO_CANALES.forEach(function (ch) {
+      const n = (d.canales && d.canales[ch]) || 0;
+      html += '<td class="' + (n === 0 ? 'cero' : '') + '">' + n + '</td>';
+    });
+    html += '<td class="tot">' + (d.total || 0) + '</td></tr>';
+  });
+  html += '</tbody><tfoot><tr><td class="dia">Total</td>';
+  TRAFICO_CANALES.forEach(function (ch) { html += '<td>' + ((semanaData.totales && semanaData.totales[ch]) || 0) + '</td>'; });
+  html += '<td>' + (semanaData.totalSemana || 0) + '</td></tr></tfoot></table>';
+  body.innerHTML = html;
+}
+
+// Sube +1 en vivo la celda de HOY del canal escaneado — solo si estás
+// viendo la semana actual y hoy es un día hábil de esa semana. Mismo
+// criterio que el backend (solo paquetes nuevos, ver mostrarOk).
+function sumarTotalLocal_(channel) {
+  if (semanaOffset !== 0 || !semanaData || !semanaData.dias) return;
+  let diaHoy = null;
+  for (let i = 0; i < semanaData.dias.length; i++) {
+    if (semanaData.dias[i].fecha === semanaData.hoy) { diaHoy = semanaData.dias[i]; break; }
+  }
+  if (!diaHoy) return;   // hoy no está en la semana vista (ej. fin de semana)
+  diaHoy.canales[channel] = (diaHoy.canales[channel] || 0) + 1;
+  diaHoy.total = (diaHoy.total || 0) + 1;
+  semanaData.totales[channel] = (semanaData.totales[channel] || 0) + 1;
+  semanaData.totalSemana = (semanaData.totalSemana || 0) + 1;
+  renderTablero_();
+}
+
+// ── Pestañas Escaneo / Tablero ──
+function mostrarVista_(cual) {
+  const esEscaneo = (cual === 'escaneo');
+  document.getElementById('vista-escaneo').style.display = esEscaneo ? '' : 'none';
+  document.getElementById('vista-tablero').style.display = esEscaneo ? 'none' : '';
+  document.getElementById('tab-escaneo').classList.toggle('active', esEscaneo);
+  document.getElementById('tab-tablero').classList.toggle('active', !esEscaneo);
+  if (esEscaneo) { focusInput(); }
+  else { cargarSemana_(); }   // al abrir el tablero, trae los datos frescos
+}
+document.getElementById('tab-escaneo').addEventListener('click', function () { mostrarVista_('escaneo'); });
+document.getElementById('tab-tablero').addEventListener('click', function () { mostrarVista_('tablero'); });
+document.getElementById('sem-prev').addEventListener('click', function () { semanaOffset--; cargarSemana_(); });
+document.getElementById('sem-next').addEventListener('click', function () { if (semanaOffset < 0) { semanaOffset++; cargarSemana_(); } });
 
 function horaCorta() {
   const d = new Date();

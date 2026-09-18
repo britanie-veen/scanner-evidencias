@@ -303,32 +303,51 @@
   }
   .nav-btn:disabled { opacity: .3; cursor: default; }
   .tablero-body { width: 100%; overflow-x: auto; }
-  table.cal { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.cal { width: 100%; border-collapse: collapse; font-size: 15px; }
   table.cal th, table.cal td {
-    padding: 10px 6px;
+    padding: 16px 12px;
     text-align: center;
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
   }
   table.cal thead th {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 900;
-    letter-spacing: .05em;
+    letter-spacing: .06em;
     text-transform: uppercase;
     color: var(--muted);
     background: var(--surface);
   }
-  table.cal td.dia { text-align: left; font-weight: 700; letter-spacing: .02em; }
+  /* números grandes para que se lean de lejos en la compu */
+  table.cal tbody td { font-size: 22px; font-weight: 700; }
+  table.cal td.dia { text-align: left; font-weight: 700; letter-spacing: .02em; font-size: 15px; }
   table.cal td.tot, table.cal th.tot { font-weight: 900; background: var(--surface); }
   table.cal td.cero { color: var(--muted); font-weight: 200; }
   table.cal tr.hoy td { background: #FFF7E6; }
   table.cal tr.hoy td.dia { color: var(--amber); }
   table.cal tfoot td {
     font-weight: 900;
+    font-size: 20px;
     background: var(--black);
     color: var(--white);
     border-bottom: none;
   }
+  table.cal tfoot td.dia { font-size: 15px; }
+
+  /* 🆕 (18-sep): en la pestaña TABLERO, la pantalla se ensancha para
+     aprovechar la compu. En Escaneo se queda angosta (cómoda para escanear).
+     La clase 'modo-tablero' la pone/quita el JS al cambiar de pestaña. */
+  #app.modo-tablero { max-width: 1040px; }
+  #app.modo-tablero .tablero-titulo { font-size: 16px; letter-spacing: .12em; }
+  #app.modo-tablero .nav-btn { width: 42px; height: 42px; font-size: 16px; }
+  #app.modo-tablero .tablero-head { padding: 14px 18px; }
+  #app.modo-tablero table.cal { font-size: 17px; }
+  #app.modo-tablero table.cal th, #app.modo-tablero table.cal td { padding: 20px 14px; }
+  #app.modo-tablero table.cal tbody td { font-size: 28px; }
+  #app.modo-tablero table.cal td.dia { font-size: 18px; }
+  #app.modo-tablero table.cal thead th { font-size: 13px; }
+  #app.modo-tablero table.cal tfoot td { font-size: 24px; }
+  #app.modo-tablero table.cal tfoot td.dia { font-size: 18px; }
   .historial {
     margin-top: 14px;
     width: 100%;
@@ -577,6 +596,8 @@ function mostrarVista_(cual) {
   document.getElementById('vista-tablero').style.display = esEscaneo ? 'none' : '';
   document.getElementById('tab-escaneo').classList.toggle('active', esEscaneo);
   document.getElementById('tab-tablero').classList.toggle('active', !esEscaneo);
+  // En Tablero, la pantalla se ensancha (modo-tablero); en Escaneo se queda angosta.
+  document.getElementById('app').classList.toggle('modo-tablero', !esEscaneo);
   if (esEscaneo) { focusInput(); }
   else { cargarSemana_(); }   // al abrir el tablero, trae los datos frescos
 }

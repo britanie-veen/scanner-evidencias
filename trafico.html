@@ -237,39 +237,74 @@
     text-transform: uppercase;
     color: var(--muted);
   }
-  /* 🆕 (18-sep): totales guardados (leídos del backend, ?action=traficoCounts)
-     — a diferencia del contador de sesión de arriba (que vive solo en memoria
-     y se reinicia al recargar), estos NO se pierden: se guardan por día en el
-     servidor. "Hoy" = lo entregado hoy; "Esta semana" = de lunes a hoy. */
-  .totales-bar {
-    margin-top: 12px;
+  /* 🆕 (18-sep): TABLERO DE TRÁFICO — desglose por canal, leído del backend
+     (?action=traficoCounts). A diferencia del contador de sesión (que vive
+     en memoria y se reinicia al recargar), estos NO se pierden: se guardan
+     por día en el servidor. Cada canal muestra "hoy" (grande) y "semana"
+     (de lunes a hoy, chiquito). El encabezado negro trae el total. */
+  .tablero {
+    margin-top: 16px;
     width: 100%;
-    display: flex;
-    gap: 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
   }
-  .total-item {
-    flex: 1;
-    padding: 16px 12px;
-    border-radius: 2px;
+  .tablero-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 16px;
     background: var(--black);
     color: var(--white);
+  }
+  .tablero-titulo {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+  .tablero-total {
+    font-size: 11px;
+    font-weight: 200;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.7);
+    text-align: right;
+  }
+  .tablero-total b { font-weight: 900; color: var(--white); }
+  .tablero-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+    gap: 1px;
+    background: var(--border);
+  }
+  .canal-card {
+    background: var(--white);
+    padding: 14px 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
   }
-  .total-num {
-    font-size: 32px;
+  .canal-nombre {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .canal-hoy {
+    font-size: 26px;
     font-weight: 900;
     line-height: 1;
   }
-  .total-label {
-    font-size: 10px;
+  .canal-semana {
+    font-size: 9px;
     font-weight: 200;
-    letter-spacing: .12em;
+    letter-spacing: .06em;
     text-transform: uppercase;
-    color: rgba(255,255,255,.6);
-    text-align: center;
+    color: var(--muted);
   }
   .historial {
     margin-top: 14px;
@@ -355,15 +390,12 @@
     <span class="session-count" id="session-count">0</span>
     <span class="session-label">escaneados en esta sesión</span>
   </div>
-  <div class="totales-bar">
-    <div class="total-item">
-      <span class="total-num" id="total-hoy">—</span>
-      <span class="total-label">Entregados hoy</span>
+  <div class="tablero">
+    <div class="tablero-head">
+      <span class="tablero-titulo">Tablero de Tráfico</span>
+      <span class="tablero-total"><b id="tablero-total-hoy">—</b> hoy · <b id="tablero-total-semana">—</b> semana</span>
     </div>
-    <div class="total-item">
-      <span class="total-num" id="total-semana">—</span>
-      <span class="total-label">Esta semana</span>
-    </div>
+    <div class="tablero-grid" id="tablero-grid"></div>
   </div>
   <div class="historial" id="historial">
     <p class="historial-vacio">Aquí se va a ir llenando la lista de esta sesión</p>
@@ -416,34 +448,66 @@ const HISTORIAL_MAX_FILAS = 300;
 // estos NO se pierden al recargar/cerrar la página: viven en el servidor.
 // Se cargan al abrir la pantalla, y suben en vivo con cada paquete nuevo
 // marcado como Entregado (sin volver a preguntarle al servidor cada vez).
-let totalHoy = null;
-let totalSemana = null;
-const hoyEl    = document.getElementById('total-hoy');
-const semanaEl = document.getElementById('total-semana');
+// Canales que se muestran en el Tablero de Tráfico, en este orden.
+// (Temu ya no es canal de CeroCero, por eso no está.)
+const TRAFICO_CANALES = ['tiktok', 'ml', 'shein', 'amazon', 'walmart'];
+// Datos del tablero (por canal), traídos del backend. Empieza en null =
+// "todavía no cargan"; mientras tanto las tarjetas muestran 0.
+let tablero = null; // { hoy:{ch:n}, semana:{ch:n}, totalHoy, totalSemana }
 
 async function cargarTotales_() {
   try {
     const res = await fetch(APPS_SCRIPT_URL + '?action=traficoCounts', { redirect: 'follow' });
     const data = await res.json();
-    if (data && typeof data.hoy === 'number') {
-      totalHoy = data.hoy;
-      totalSemana = (typeof data.semana === 'number') ? data.semana : data.hoy;
-      hoyEl.textContent = totalHoy;
-      semanaEl.textContent = totalSemana;
+    if (data && data.hoy) {
+      tablero = data;
+      renderTablero_();
     }
   } catch (err) {
-    // Si falla la carga, los números se quedan en "—" y NO estorba el
+    // Si falla la carga, el tablero se queda como estaba y NO estorba el
     // escaneo — el conteo real igual queda guardado en el backend.
   }
 }
-// Sube +1 los totales en pantalla cuando se marca un paquete NUEVO como
-// Entregado (mismo criterio que el backend: solo si NO estaba entregado
-// antes). Si los totales aún no cargaron (null), no hace nada — al
-// recargar se traen los reales del servidor.
-function sumarTotalLocal_() {
-  if (totalHoy !== null)    { totalHoy++;    hoyEl.textContent    = totalHoy; }
-  if (totalSemana !== null) { totalSemana++; semanaEl.textContent = totalSemana; }
+
+// Dibuja el tablero por canal desde `tablero`. Se llama al cargar y cada
+// vez que sube un conteo. Reconstruye la rejilla (son pocos canales, es
+// barato) para no depender de IDs por canal.
+function renderTablero_() {
+  const grid = document.getElementById('tablero-grid');
+  if (!grid) return;
+  const hoy    = (tablero && tablero.hoy)    || {};
+  const semana = (tablero && tablero.semana) || {};
+  grid.innerHTML = TRAFICO_CANALES.map(function (ch) {
+    return '<div class="canal-card">' +
+             '<div class="canal-nombre">' + (CHANNEL_LABELS[ch] || ch) + '</div>' +
+             '<div class="canal-hoy">' + (hoy[ch] || 0) + '</div>' +
+             '<div class="canal-semana">semana ' + (semana[ch] || 0) + '</div>' +
+           '</div>';
+  }).join('');
+  const th = document.getElementById('tablero-total-hoy');
+  const ts = document.getElementById('tablero-total-semana');
+  if (th) th.textContent = (tablero && tablero.totalHoy)    || 0;
+  if (ts) ts.textContent = (tablero && tablero.totalSemana) || 0;
 }
+
+// Sube +1 el canal indicado cuando se marca un paquete NUEVO como
+// Entregado (mismo criterio que el backend: solo si NO estaba entregado
+// antes). Si el tablero aún no cargó, no hace nada — al recargar se traen
+// los números reales del servidor.
+function sumarTotalLocal_(channel) {
+  if (!tablero) return;
+  if (!tablero.hoy)    tablero.hoy = {};
+  if (!tablero.semana) tablero.semana = {};
+  tablero.hoy[channel]    = (tablero.hoy[channel]    || 0) + 1;
+  tablero.semana[channel] = (tablero.semana[channel] || 0) + 1;
+  tablero.totalHoy    = (tablero.totalHoy    || 0) + 1;
+  tablero.totalSemana = (tablero.totalSemana || 0) + 1;
+  renderTablero_();
+}
+
+// Dibuja el tablero vacío de una vez (0 en todo) y luego lo llena con los
+// datos reales del backend en cuanto llegan.
+renderTablero_();
 window.addEventListener('load', cargarTotales_);
 
 function horaCorta() {
@@ -574,7 +638,7 @@ function mostrarOk(data) {
   // backend (que ya sumó su contador con !yaEntregado). Los re-escaneos
   // (yaEntregado) NO suman. Va aquí arriba para que cuente igual aunque
   // el pedido esté Cancelado (el backend también lo cuenta como entregado).
-  if (!data.yaEntregado) sumarTotalLocal_();
+  if (!data.yaEntregado) sumarTotalLocal_(data.channel);
   if (data.cancelado) {
     card.className = 'result-card cancelado';
     card.innerHTML =

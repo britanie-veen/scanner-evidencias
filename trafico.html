@@ -237,6 +237,40 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+  /* 🆕 (18-sep): totales guardados (leídos del backend, ?action=traficoCounts)
+     — a diferencia del contador de sesión de arriba (que vive solo en memoria
+     y se reinicia al recargar), estos NO se pierden: se guardan por día en el
+     servidor. "Hoy" = lo entregado hoy; "Esta semana" = de lunes a hoy. */
+  .totales-bar {
+    margin-top: 12px;
+    width: 100%;
+    display: flex;
+    gap: 12px;
+  }
+  .total-item {
+    flex: 1;
+    padding: 16px 12px;
+    border-radius: 2px;
+    background: var(--black);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .total-num {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .total-label {
+    font-size: 10px;
+    font-weight: 200;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.6);
+    text-align: center;
+  }
   .historial {
     margin-top: 14px;
     width: 100%;
@@ -321,6 +355,16 @@
     <span class="session-count" id="session-count">0</span>
     <span class="session-label">escaneados en esta sesión</span>
   </div>
+  <div class="totales-bar">
+    <div class="total-item">
+      <span class="total-num" id="total-hoy">—</span>
+      <span class="total-label">Entregados hoy</span>
+    </div>
+    <div class="total-item">
+      <span class="total-num" id="total-semana">—</span>
+      <span class="total-label">Esta semana</span>
+    </div>
+  </div>
   <div class="historial" id="historial">
     <p class="historial-vacio">Aquí se va a ir llenando la lista de esta sesión</p>
   </div>
@@ -366,6 +410,41 @@ const historialEl = document.getElementById('historial');
 // haciendo más pesado el navegador — se recorta lo más viejo, que de
 // todas formas ya no es lo que se necesita revisar al momento.
 const HISTORIAL_MAX_FILAS = 300;
+
+// 🆕 (18-sep): totales GUARDADOS (por día) — se leen del backend con
+// ?action=traficoCounts. A diferencia del contador de sesión de arriba,
+// estos NO se pierden al recargar/cerrar la página: viven en el servidor.
+// Se cargan al abrir la pantalla, y suben en vivo con cada paquete nuevo
+// marcado como Entregado (sin volver a preguntarle al servidor cada vez).
+let totalHoy = null;
+let totalSemana = null;
+const hoyEl    = document.getElementById('total-hoy');
+const semanaEl = document.getElementById('total-semana');
+
+async function cargarTotales_() {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?action=traficoCounts', { redirect: 'follow' });
+    const data = await res.json();
+    if (data && typeof data.hoy === 'number') {
+      totalHoy = data.hoy;
+      totalSemana = (typeof data.semana === 'number') ? data.semana : data.hoy;
+      hoyEl.textContent = totalHoy;
+      semanaEl.textContent = totalSemana;
+    }
+  } catch (err) {
+    // Si falla la carga, los números se quedan en "—" y NO estorba el
+    // escaneo — el conteo real igual queda guardado en el backend.
+  }
+}
+// Sube +1 los totales en pantalla cuando se marca un paquete NUEVO como
+// Entregado (mismo criterio que el backend: solo si NO estaba entregado
+// antes). Si los totales aún no cargaron (null), no hace nada — al
+// recargar se traen los reales del servidor.
+function sumarTotalLocal_() {
+  if (totalHoy !== null)    { totalHoy++;    hoyEl.textContent    = totalHoy; }
+  if (totalSemana !== null) { totalSemana++; semanaEl.textContent = totalSemana; }
+}
+window.addEventListener('load', cargarTotales_);
 
 function horaCorta() {
   const d = new Date();
@@ -490,6 +569,12 @@ function mostrarCargando(codigo) {
 // grave.
 function mostrarOk(data) {
   const nombreCanal = CHANNEL_LABELS[data.channel] || data.channel || '—';
+  // 🆕 (18-sep): si es un paquete NUEVO (no estaba entregado antes), sube
+  // los totales "Hoy"/"Esta semana" en pantalla. Mismo criterio que el
+  // backend (que ya sumó su contador con !yaEntregado). Los re-escaneos
+  // (yaEntregado) NO suman. Va aquí arriba para que cuente igual aunque
+  // el pedido esté Cancelado (el backend también lo cuenta como entregado).
+  if (!data.yaEntregado) sumarTotalLocal_();
   if (data.cancelado) {
     card.className = 'result-card cancelado';
     card.innerHTML =

@@ -844,6 +844,10 @@
            (Merma) ni está bien (Buen Estado), así que NO debe entrar a la
            categorización de Merma del Tablero de Mon (ver backend). -->
       <button type="button" class="condition-btn" id="cond-noproducto" onclick="setCondition('No es el producto')">❌ No es el producto</button>
+      <!-- 🆕 (21-sep): "Incompleto" = la devolución llegó pero faltan piezas
+           (ej. debían regresar 2 tapetes y solo llegó 1). Solo se registra en
+           el Sheet, NO manda nada al Tablero de Mon (igual que "No es el producto"). -->
+      <button type="button" class="condition-btn" id="cond-incompleto" onclick="setCondition('Incompleto')">🧩 Incompleto</button>
     </div>
     <!-- 🆕 (03-sep): comentario opcional — solo en modo Devolución. Para
          casos que no encajan limpio en ninguna de las 3 condiciones de
@@ -1380,6 +1384,7 @@ function setCondition(value) {
   document.getElementById('cond-bueno').classList.toggle('active', value === 'Buen Estado');
   document.getElementById('cond-merma').classList.toggle('active', value === 'Merma');
   document.getElementById('cond-noproducto').classList.toggle('active', value === 'No es el producto');
+  document.getElementById('cond-incompleto').classList.toggle('active', value === 'Incompleto');
 }
 
 /* ── Limpieza del código escaneado ─────────────────────────── */
@@ -1777,6 +1782,7 @@ async function onScanSuccess(raw) {
       document.getElementById('cond-bueno').classList.remove('active');
       document.getElementById('cond-merma').classList.remove('active');
       document.getElementById('cond-noproducto').classList.remove('active');
+      document.getElementById('cond-incompleto').classList.remove('active');
       document.getElementById('condition-toggle').style.display =
         (currentMode === 'devolucion') ? 'flex' : 'none';
 
@@ -1951,6 +1957,7 @@ async function buscarPorSufijoManual(sufijo) {
     document.getElementById('cond-bueno').classList.remove('active');
     document.getElementById('cond-merma').classList.remove('active');
     document.getElementById('cond-noproducto').classList.remove('active');
+    document.getElementById('cond-incompleto').classList.remove('active');
     document.getElementById('condition-toggle').style.display = 'flex';
 
     // 🆕 (03-sep): comentario opcional — este bloque es el de la
@@ -2162,7 +2169,7 @@ function submitPhoto() {
   if (!n) { alert('Primero toma al menos una foto.'); return; }
   // En devolución es obligatorio elegir Buen Estado o Merma antes de enviar.
   if (currentMode === 'devolucion' && !currentCondition) {
-    alert('Selecciona la condición del producto (Buen Estado, Merma o No es el producto) antes de enviar.');
+    alert('Selecciona la condición del producto (Buen Estado, Merma, No es el producto o Incompleto) antes de enviar.');
     return;
   }
 

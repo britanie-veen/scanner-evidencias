@@ -661,8 +661,6 @@
       <button class="mode-btn active" id="btn-envio" onclick="setMode('envio')">Envío</button>
       <button class="mode-btn" id="btn-devolucion" onclick="setMode('devolucion')">Devolución</button>
     </div>
-    <!-- Conteo en vivo del día (se actualiza al cambiar de modo / volver a Home) -->
-    <p class="count-summary" id="count-summary">Cargando conteo del día…</p>
     <button class="btn btn-primary" onclick="startFlow()">
       Escanear guía
     </button>
@@ -671,6 +669,9 @@
          lugar, sin tocar nada del flujo de envío/devolución de aquí arriba. -->
     <button class="btn btn-secondary" onclick="window.location.href = 'trafico.html'">
       📦&nbsp; Tráfico — marcar entregados
+    </button>
+    <button class="btn btn-secondary" onclick="window.location.href = 'envios-tablero.html'">
+      📊&nbsp; Tablero de envíos
     </button>
   </div>
 

@@ -130,7 +130,7 @@
       </div>
       <div class="tablero-body" id="cmp-body"><p style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Cargando…</p></div>
     </div>
-    <p class="nota">Por mes y canal: cuántas se escanearon en <b>Envío</b> vs en <b>Tráfico</b>, y cuáles <b>faltan</b> (enviadas pero sin escanear en Tráfico). Toca un canal para ver el detalle de las etiquetas que no machearon.</p>
+    <p class="nota">Por semana (Lun–Vie) y canal: cuántas etiquetas <b>faltan</b> (se escanearon en Envío pero NO en Tráfico) cada día. Toca un día para ver el detalle de las etiquetas que no machearon.</p>
   </div>
 </div>
 
@@ -145,7 +145,7 @@ function setTab(t) {
   document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === t); });
   document.querySelectorAll('.panel').forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + t); });
   if (t === 'trafico' && !traCargado) { traCargado = true; cargarSemanaTra_(); }
-  if (t === 'comparativo' && !cmpCargado) { cmpCargado = true; cargarMes_(); }
+  if (t === 'comparativo' && !cmpCargado) { cmpCargado = true; cargarSemanaCmp_(); }
 }
 
 /* ---------- Helpers de semana (compartidos Envíos/Tráfico) ---------- */
@@ -212,64 +212,68 @@ async function cargarSemanaTra_() {
 document.getElementById('tra-prev').addEventListener('click', function () { traOffset--; cargarSemanaTra_(); });
 document.getElementById('tra-next').addEventListener('click', function () { if (traOffset < 0) { traOffset++; cargarSemanaTra_(); } });
 
-/* ---------- COMPARATIVO ---------- */
-let cmpOffset = 0, cmpCargado = false;   // 0 = mes actual, -1 = mes anterior…
-function mesKey_(offset) {
-  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + offset);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-}
-function tituloMes_(mesStr) {
-  const p = mesStr.split('-'); return MESES_LARGO[Number(p[1]) - 1] + ' ' + p[0];
-}
-async function cargarMes_() {
-  const mes = mesKey_(cmpOffset);
-  document.getElementById('cmp-titulo').textContent = tituloMes_(mes);
+/* ---------- COMPARATIVO (por semana, por día y canal) ---------- */
+let cmpOffset = 0, cmpCargado = false;   // 0 = semana actual, -1 = la anterior…
+async function cargarSemanaCmp_() {
+  const lunes = lunesDeSemana_(cmpOffset);
+  document.getElementById('cmp-titulo').textContent = tituloSemana_(lunes);
   document.getElementById('cmp-next').disabled = (cmpOffset >= 0);
   document.getElementById('cmp-body').innerHTML = '<p style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Cargando… (puede tardar unos segundos)</p>';
   let data = null;
-  try { data = await (await fetch(APPS_SCRIPT_URL + '?action=faltantesMes&mes=' + mes, { redirect: 'follow' })).json(); } catch (e) {}
+  try { data = await (await fetch(APPS_SCRIPT_URL + '?action=faltantesSemana&inicio=' + fechaKey_(lunes), { redirect: 'follow' })).json(); } catch (e) {}
   renderComp_(data);
 }
 function renderComp_(data) {
   const body = document.getElementById('cmp-body');
-  if (!data || !data.canales) { body.innerHTML = '<p style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Sin datos</p>'; return; }
+  if (!data || !data.dias) { body.innerHTML = '<p style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Sin datos</p>'; return; }
   window._cmpData = data;
-  let aviso = '';
-  const sinFecha = data.canales.filter(function (c) { return c.sinFecha; }).map(function (c) { return LABELS[c.canal] || c.canal; });
-  if (sinFecha.length) aviso = '<div class="aviso">⚠️ ' + sinFecha.join(', ') + ': sin columna de fecha por fila, no se puede acotar por mes (no se incluye en el comparativo).</div>';
-  let html = aviso + '<table class="comp"><thead><tr><th class="canal" style="text-align:left;">Canal</th><th>Enviadas</th><th>En Tráfico</th><th>Faltan</th></tr></thead><tbody>';
-  data.canales.forEach(function (c, i) {
-    if (c.sinFecha) return;
-    const faltan = c.faltan.length;
-    html += '<tr class="click" onclick="toggleDet_(' + i + ')">' +
-      '<td class="canal">' + (LABELS[c.canal] || c.canal) + '</td>' +
-      '<td>' + c.enviadas + '</td>' +
-      '<td>' + c.entregadas + '</td>' +
-      '<td class="faltan ' + (faltan === 0 ? 'cero' : '') + '">' + faltan + (faltan ? ' ›' : ' ✓') + '</td></tr>';
-    html += '<tr class="detalle" id="det-' + i + '" style="display:none;"><td colspan="4"><div class="detalle-inner" id="det-inner-' + i + '"></div></td></tr>';
+  // tabla: filas = días (Lun–Vie), columnas = canales, celda = FALTAN de ese día/canal
+  let html = '<table class="comp"><thead><tr><th class="canal" style="text-align:left;">Día</th>';
+  CANALES.forEach(function (ch) { html += '<th>' + (LABELS[ch] || ch) + '</th>'; });
+  html += '<th>Faltan</th></tr></thead><tbody>';
+  const totCanal = {}; CANALES.forEach(function (ch) { totCanal[ch] = 0; });
+  let totSemana = 0;
+  data.dias.forEach(function (d, i) {
+    const esHoy = (d.fecha === data.hoy);
+    const diaNum = Number(d.fecha.split('-')[2]);
+    const hayDetalle = d.totalFaltan > 0;
+    html += '<tr class="' + (hayDetalle ? 'click' : '') + '"' + (hayDetalle ? ' onclick="toggleDia_(' + i + ')"' : '') + '>';
+    html += '<td class="canal">' + d.nombre.slice(0, 3) + ' ' + diaNum + (esHoy ? ' · hoy' : '') + '</td>';
+    CANALES.forEach(function (ch) {
+      const n = (d.porCanal[ch] && d.porCanal[ch].faltan.length) || 0;
+      totCanal[ch] += n;
+      html += '<td class="' + (n === 0 ? 'cero' : 'faltan') + '">' + n + '</td>';
+    });
+    totSemana += d.totalFaltan;
+    html += '<td class="faltan ' + (d.totalFaltan === 0 ? 'cero' : '') + '">' + d.totalFaltan + (hayDetalle ? ' ›' : ' ✓') + '</td></tr>';
+    html += '<tr class="detalle" id="det-' + i + '" style="display:none;"><td colspan="' + (CANALES.length + 2) + '"><div class="detalle-inner" id="det-inner-' + i + '"></div></td></tr>';
   });
-  const t = data.totales || { enviadas: 0, entregadas: 0, faltan: 0 };
-  html += '</tbody><tfoot><tr><td class="canal">Total</td><td>' + t.enviadas + '</td><td>' + t.entregadas + '</td><td>' + t.faltan + '</td></tr></tfoot></table>';
+  html += '</tbody><tfoot><tr><td class="canal">Faltan</td>';
+  CANALES.forEach(function (ch) { html += '<td>' + totCanal[ch] + '</td>'; });
+  html += '<td>' + totSemana + '</td></tr></tfoot></table>';
   body.innerHTML = html;
 }
-function toggleDet_(i) {
+function toggleDia_(i) {
   const row = document.getElementById('det-' + i);
   const inner = document.getElementById('det-inner-' + i);
   if (!row) return;
   if (row.style.display === 'none') {
-    const c = window._cmpData.canales[i];
-    if (!c.faltan.length) { inner.innerHTML = '<p style="padding:8px 0;color:#00A86B;font-size:13px;">✓ Todo lo enviado se escaneó en Tráfico.</p>'; }
-    else {
-      inner.innerHTML = c.faltan.map(function (f) {
-        const fecha = f.fecha ? String(f.fecha).slice(0, 10) : '';
-        return '<div class="falta-row"><span class="g">' + (f.guia || '—') + '</span><span class="s">' + (f.sku || '') + '</span><span>' + (f.pedido || '') + '</span><span style="color:var(--muted);margin-left:auto;">' + fecha + '</span></div>';
+    const d = window._cmpData.dias[i];
+    let html = '';
+    CANALES.forEach(function (ch) {
+      const pc = d.porCanal[ch];
+      if (!pc || !pc.faltan.length) return;
+      html += '<div style="font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;">' + (LABELS[ch] || ch) + ' · faltan ' + pc.faltan.length + '</div>';
+      html += pc.faltan.map(function (f) {
+        return '<div class="falta-row"><span class="g">' + (f.guia || '—') + '</span><span class="s">' + (f.sku || '') + '</span><span style="color:var(--muted);margin-left:auto;">' + (f.pedido || '') + '</span></div>';
       }).join('');
-    }
+    });
+    inner.innerHTML = html || '<p style="padding:8px 0;color:#00A86B;font-size:13px;">✓ Ese día todo lo enviado se escaneó en Tráfico.</p>';
     row.style.display = '';
   } else { row.style.display = 'none'; }
 }
-document.getElementById('cmp-prev').addEventListener('click', function () { cmpOffset--; cargarMes_(); });
-document.getElementById('cmp-next').addEventListener('click', function () { if (cmpOffset < 0) { cmpOffset++; cargarMes_(); } });
+document.getElementById('cmp-prev').addEventListener('click', function () { cmpOffset--; cargarSemanaCmp_(); });
+document.getElementById('cmp-next').addEventListener('click', function () { if (cmpOffset < 0) { cmpOffset++; cargarSemanaCmp_(); } });
 
 /* arranque: Envíos visible */
 cargarSemanaEnv_();

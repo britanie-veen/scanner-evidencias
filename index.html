@@ -299,12 +299,13 @@
     }
     .mode-btn {
       flex: 1;
-      padding: 14px;
+      padding: 14px 4px;           /* 3 opciones: menos aire lateral para que quepan en el cel */
       border: none;
       font-family: 'Montserrat', sans-serif;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      letter-spacing: .12em;
+      letter-spacing: .08em;
+      white-space: nowrap;
       text-transform: uppercase;
       cursor: pointer;
       background: var(--white);
@@ -656,10 +657,14 @@
       </div>
       <p class="subtitle">Escanea la guía y registra<br>la evidencia en un paso</p>
     </div>
-    <!-- Toggle Envío / Devolución -->
+    <!-- Toggle Marketplace / Tráfico / Devoluciones (19-oct: pidió Bri).
+         Marketplace = el modo "envío" de siempre (ids intactos para setMode);
+         Tráfico abre trafico.html (pistola USB, marcar entregados);
+         Devoluciones = el modo "devolucion" de siempre. -->
     <div class="mode-toggle">
-      <button class="mode-btn active" id="btn-envio" onclick="setMode('envio')">Envío</button>
-      <button class="mode-btn" id="btn-devolucion" onclick="setMode('devolucion')">Devolución</button>
+      <button class="mode-btn active" id="btn-envio" onclick="setMode('envio')">Marketplace</button>
+      <button class="mode-btn" id="btn-trafico" onclick="window.location.href = 'trafico.html'">Tráfico</button>
+      <button class="mode-btn" id="btn-devolucion" onclick="setMode('devolucion')">Devoluciones</button>
     </div>
     <button class="btn btn-primary" onclick="startFlow()">
       Escanear guía
@@ -785,7 +790,7 @@
     <!-- Indicador del modo activo -->
     <div class="mode-indicator" id="found-mode-indicator">
       <span class="mode-label-key">Modo</span>
-      <span id="found-mode-label">Envío</span>
+      <span id="found-mode-label">Marketplace</span>
     </div>
     <!-- Foto de catálogo del producto (solo si existe foto para el SKU en Drive) -->
     <img class="catalog-photo" id="info-catalog-photo" alt="Foto del producto" style="display:none">
@@ -1771,7 +1776,7 @@ async function onScanSuccess(raw) {
         modeLabel.textContent = 'Devolución · ' + text;
         modeIndicator.classList.add('devolucion');
       } else {
-        modeLabel.textContent = 'Envío';
+        modeLabel.textContent = 'Marketplace';
         modeIndicator.classList.remove('devolucion');
       }
 

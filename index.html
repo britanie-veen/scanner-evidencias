@@ -663,7 +663,7 @@
          Devoluciones = el modo "devolucion" de siempre. -->
     <div class="mode-toggle">
       <button class="mode-btn active" id="btn-envio" onclick="setMode('envio')">Marketplace</button>
-      <button class="mode-btn" id="btn-trafico" onclick="window.location.href = 'trafico.html'">Tráfico</button>
+      <button class="mode-btn" id="btn-trafico" onclick="setMode('trafico')">Tráfico</button>
       <button class="mode-btn" id="btn-devolucion" onclick="setMode('devolucion')">Devoluciones</button>
     </div>
     <button class="btn btn-primary" onclick="startFlow()">
@@ -997,7 +997,7 @@ function continuarPeseACancelado_() {
   abrirCamaraViva();
   mostrarAvisoSiYaTieneFotos_();
 }
-let currentMode      = 'envio';   // 'envio' | 'devolucion'
+let currentMode      = 'envio';   // 'envio' (Marketplace) | 'trafico' | 'devolucion'
 let currentCondition = null;      // 'Buen Estado' | 'Merma' | 'No es el producto' — solo devolución
 
 // 🆕 (17-ago): temporizador del auto-avance en ENVÍO (ver submitPhoto()).
@@ -1030,6 +1030,10 @@ function setMode(mode) {
   currentMode = mode;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + mode).classList.add('active');
+  // 🆕 (19-oct): Tráfico se selecciona igual que los otros dos y se abre
+  // hasta "Escanear guía" (ver startFlow). Su conteo del día vive en
+  // trafico.html / Tableros, así que aquí no se pide.
+  if (mode === 'trafico') { const el = document.getElementById('count-summary'); if (el) el.textContent = ''; return; }
   loadCounts();
 }
 
@@ -1129,6 +1133,11 @@ function startFlow() {
   // exactamente como siempre.
   if (currentMode === 'devolucion') {
     startScanner();
+    return;
+  }
+  // 🆕 (19-oct): Tráfico = pantalla de la pistola USB (trafico.html).
+  if (currentMode === 'trafico') {
+    window.location.href = 'trafico.html';
     return;
   }
   document.getElementById('channel-select-subtitle').innerHTML = 'Selecciona el canal<br>del envío';

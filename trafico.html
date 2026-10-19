@@ -334,6 +334,8 @@
   }
   table.cal tfoot td.dia { font-size: 15px; }
 
+  .nota-tableros { text-align:center; margin:18px 0 0; font-size:11px; letter-spacing:.12em; text-transform:uppercase; }
+  .nota-tableros a { color: var(--muted, #888); text-decoration:none; }
   /* 🆕 (18-sep): en la pestaña TABLERO, la pantalla se ensancha para
      aprovechar la compu. En Escaneo se queda angosta (cómoda para escanear).
      La clase 'modo-tablero' la pone/quita el JS al cambiar de pestaña. */
@@ -422,11 +424,8 @@
   <h1>Tráfico</h1>
   <p class="subtitle">Conecta tu pistola/escáner a esta computadora<br>y escanea el código de cada paquete.</p>
 
-  <!-- Pestañas: Escaneo (limpio) / Tablero (calendario semanal) -->
-  <div class="tabs">
-    <button class="tab active" id="tab-escaneo" type="button">Escaneo</button>
-    <button class="tab" id="tab-tablero" type="button">Tablero</button>
-  </div>
+  <!-- 🆕 (19-oct): la pestaña "Tablero" se quitó de aquí — el tablero de
+       Tráfico vive en "Tableros del Scanner" (tableros.html). -->
 
   <!-- ═══ VISTA ESCANEO ═══ -->
   <div id="vista-escaneo" class="vista">
@@ -445,17 +444,7 @@
     </div>
   </div>
 
-  <!-- ═══ VISTA TABLERO (calendario semanal Lun–Vie, navegable) ═══ -->
-  <div id="vista-tablero" class="vista" style="display:none;">
-    <div class="tablero">
-      <div class="tablero-head">
-        <button class="nav-btn" id="sem-prev" type="button">◀</button>
-        <span class="tablero-titulo" id="sem-titulo">Semana</span>
-        <button class="nav-btn" id="sem-next" type="button">▶</button>
-      </div>
-      <div class="tablero-body" id="tablero-body"></div>
-    </div>
-  </div>
+  <p class="nota-tableros"><a href="tableros.html">📊 Ver tableros del scanner</a></p>
 </div>
 
 <script>
@@ -590,21 +579,8 @@ function sumarTotalLocal_(channel) {
 }
 
 // ── Pestañas Escaneo / Tablero ──
-function mostrarVista_(cual) {
-  const esEscaneo = (cual === 'escaneo');
-  document.getElementById('vista-escaneo').style.display = esEscaneo ? '' : 'none';
-  document.getElementById('vista-tablero').style.display = esEscaneo ? 'none' : '';
-  document.getElementById('tab-escaneo').classList.toggle('active', esEscaneo);
-  document.getElementById('tab-tablero').classList.toggle('active', !esEscaneo);
-  // En Tablero, la pantalla se ensancha (modo-tablero); en Escaneo se queda angosta.
-  document.getElementById('app').classList.toggle('modo-tablero', !esEscaneo);
-  if (esEscaneo) { focusInput(); }
-  else { cargarSemana_(); }   // al abrir el tablero, trae los datos frescos
-}
-document.getElementById('tab-escaneo').addEventListener('click', function () { mostrarVista_('escaneo'); });
-document.getElementById('tab-tablero').addEventListener('click', function () { mostrarVista_('tablero'); });
-document.getElementById('sem-prev').addEventListener('click', function () { semanaOffset--; cargarSemana_(); });
-document.getElementById('sem-next').addEventListener('click', function () { if (semanaOffset < 0) { semanaOffset++; cargarSemana_(); } });
+// 🆕 (19-oct): sin pestañas — solo Escaneo. (Las funciones del tablero
+// semanal de arriba quedan sin usar; el tablero vive en tableros.html.)
 
 function horaCorta() {
   const d = new Date();

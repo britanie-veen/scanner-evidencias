@@ -86,11 +86,12 @@
       <h1>Tableros del Scanner</h1>
     </div>
   </div>
-  <p class="subtitle">Todo en un solo lugar: lo que se escaneó en Envíos, lo que se escaneó en Tráfico, y el comparativo entre ambos para ver qué etiqueta no hizo match.</p>
+  <p class="subtitle">Todo en un solo lugar: lo escaneado en Marketplace, en Tráfico y en Devoluciones, y el comparativo Marketplace vs Tráfico para ver qué etiqueta no hizo match.</p>
 
   <div class="tabs">
-    <button class="tab active" data-tab="envios" onclick="setTab('envios')">📦 Envíos</button>
+    <button class="tab active" data-tab="envios" onclick="setTab('envios')">📦 Marketplace</button>
     <button class="tab" data-tab="trafico" onclick="setTab('trafico')">🚦 Tráfico</button>
+    <button class="tab" data-tab="devoluciones" onclick="setTab('devoluciones')">↩️ Devoluciones</button>
     <button class="tab" data-tab="comparativo" onclick="setTab('comparativo')">🔀 Comparativo</button>
   </div>
 
@@ -120,6 +121,19 @@
     <p class="nota">Paquetes marcados como "entregados" (escaneados en Tráfico) por día y canal.</p>
   </div>
 
+  <!-- DEVOLUCIONES (19-oct) -->
+  <div class="panel" id="panel-devoluciones">
+    <div class="tablero">
+      <div class="tablero-head">
+        <button class="nav-btn" id="dev-prev" type="button">&#9664;</button>
+        <span class="tablero-titulo" id="dev-titulo">Semana</span>
+        <button class="nav-btn" id="dev-next" type="button">&#9654;</button>
+      </div>
+      <div class="tablero-body" id="dev-body"></div>
+    </div>
+    <p class="nota">Devoluciones escaneadas (evidencia subida) por día y canal.</p>
+  </div>
+
   <!-- COMPARATIVO -->
   <div class="panel" id="panel-comparativo">
     <div class="tablero">
@@ -146,6 +160,7 @@ function setTab(t) {
   document.querySelectorAll('.panel').forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + t); });
   if (t === 'trafico' && !traCargado) { traCargado = true; cargarSemanaTra_(); }
   if (t === 'comparativo' && !cmpCargado) { cmpCargado = true; cargarSemanaCmp_(); }
+  if (t === 'devoluciones' && !devCargado) { devCargado = true; cargarSemanaDev_(); }
 }
 
 /* ---------- Helpers de semana (compartidos Envíos/Tráfico) ---------- */
@@ -166,22 +181,23 @@ function tituloSemana_(lunes) {
 function renderCal_(bodyId, data) {
   const body = document.getElementById(bodyId);
   if (!data || !data.dias) { body.innerHTML = '<p style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Sin datos</p>'; return; }
+  const CAN = (data.canalesLista && data.canalesLista.length) ? data.canalesLista : CANALES;   // el motor puede mandar su propia lista (Devoluciones)
   let html = '<table class="cal"><thead><tr><th class="dia" style="text-align:left;">Día</th>';
-  CANALES.forEach(function (ch) { html += '<th>' + (LABELS[ch] || ch) + '</th>'; });
+  CAN.forEach(function (ch) { html += '<th>' + (LABELS[ch] || ch) + '</th>'; });
   html += '<th class="tot">Total</th></tr></thead><tbody>';
   data.dias.forEach(function (d) {
     const esHoy = (d.fecha === data.hoy);
     const diaNum = Number(d.fecha.split('-')[2]);
     html += '<tr class="' + (esHoy ? 'hoy' : '') + '">';
     html += '<td class="dia">' + d.nombre.slice(0, 3) + ' ' + diaNum + (esHoy ? ' · hoy' : '') + '</td>';
-    CANALES.forEach(function (ch) {
+    CAN.forEach(function (ch) {
       const n = (d.canales && d.canales[ch]) || 0;
       html += '<td class="' + (n === 0 ? 'cero' : '') + '">' + n + '</td>';
     });
     html += '<td class="tot">' + (d.total || 0) + '</td></tr>';
   });
   html += '</tbody><tfoot><tr><td class="dia">Total</td>';
-  CANALES.forEach(function (ch) { html += '<td>' + ((data.totales && data.totales[ch]) || 0) + '</td>'; });
+  CAN.forEach(function (ch) { html += '<td>' + ((data.totales && data.totales[ch]) || 0) + '</td>'; });
   html += '<td>' + (data.totalSemana || 0) + '</td></tr></tfoot></table>';
   body.innerHTML = html;
 }
@@ -211,6 +227,19 @@ async function cargarSemanaTra_() {
 }
 document.getElementById('tra-prev').addEventListener('click', function () { traOffset--; cargarSemanaTra_(); });
 document.getElementById('tra-next').addEventListener('click', function () { if (traOffset < 0) { traOffset++; cargarSemanaTra_(); } });
+
+/* ---------- DEVOLUCIONES (19-oct) ---------- */
+let devOffset = 0, devCargado = false;
+async function cargarSemanaDev_() {
+  const lunes = lunesDeSemana_(devOffset);
+  document.getElementById('dev-titulo').textContent = tituloSemana_(lunes);
+  document.getElementById('dev-next').disabled = (devOffset >= 0);
+  let data = null;
+  try { data = await (await fetch(APPS_SCRIPT_URL + '?action=devolucionSemana&inicio=' + fechaKey_(lunes), { redirect: 'follow' })).json(); } catch (e) {}
+  renderCal_('dev-body', data);
+}
+document.getElementById('dev-prev').addEventListener('click', function () { devOffset--; cargarSemanaDev_(); });
+document.getElementById('dev-next').addEventListener('click', function () { if (devOffset < 0) { devOffset++; cargarSemanaDev_(); } });
 
 /* ---------- COMPARATIVO (por semana, por día y canal) ---------- */
 let cmpOffset = 0, cmpCargado = false;   // 0 = semana actual, -1 = la anterior…

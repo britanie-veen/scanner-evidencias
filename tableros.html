@@ -57,6 +57,11 @@
   table.cal tfoot td.dia { font-size: 15px; }
   .nota { font-size: 11px; font-weight: 200; color: var(--muted); margin-top: 14px; letter-spacing: .04em; }
 
+  /* Comparativo — filtro por canal (19-oct) */
+  .filtro-canal { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 14px 4px; }
+  .chip-canal { background: var(--white); color: var(--black); border: 1px solid var(--border); border-radius: 999px;
+    padding: 7px 14px; font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+  .chip-canal.active { background: var(--black); color: var(--white); border-color: var(--black); }
   /* Comparativo */
   table.comp { width: 100%; border-collapse: collapse; font-size: 16px; }
   table.comp th, table.comp td { padding: 14px 12px; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -142,9 +147,10 @@
         <span class="tablero-titulo" id="cmp-titulo">Mes</span>
         <button class="nav-btn" id="cmp-next" type="button">&#9654;</button>
       </div>
+      <div class="filtro-canal" id="cmp-filtro"></div>
       <div class="tablero-body" id="cmp-body"><p style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Cargando…</p></div>
     </div>
-    <p class="nota">Por semana (Lun–Vie) y canal: cuántas etiquetas <b>faltan</b> (se escanearon en Envío pero NO en Tráfico) cada día. Toca un día para ver el detalle de las etiquetas que no machearon.</p>
+    <p class="nota">Por semana (Lun–Vie) y canal: cuántas etiquetas <b>faltan</b> (se escanearon en Marketplace pero NO en Tráfico) cada día. Elige un canal arriba para verlo solo (enviadas · entregadas · faltan). Toca un día para ver el detalle de las etiquetas que no machearon.</p>
   </div>
 </div>
 
@@ -252,10 +258,24 @@ async function cargarSemanaCmp_() {
   try { data = await (await fetch(APPS_SCRIPT_URL + '?action=faltantesSemana&inicio=' + fechaKey_(lunes), { redirect: 'follow' })).json(); } catch (e) {}
   renderComp_(data);
 }
+// 🆕 (19-oct): filtro por canal — '' = todos los canales (vista clásica);
+// un canal = tabla de ese canal con Enviadas · Entregadas · Faltan por día.
+let cmpCanal = '';
+function setCmpCanal_(ch) { cmpCanal = ch; if (window._cmpData) renderComp_(window._cmpData); }
+function renderFiltroCmp_() {
+  const f = document.getElementById('cmp-filtro');
+  if (!f) return;
+  const chips = [{ k: '', t: 'Todos' }].concat(CANALES.map(function (ch) { return { k: ch, t: LABELS[ch] || ch }; }));
+  f.innerHTML = chips.map(function (c) {
+    return '<button type="button" class="chip-canal ' + (c.k === cmpCanal ? 'active' : '') + '" onclick="setCmpCanal_(\'' + c.k + '\')">' + c.t + '</button>';
+  }).join('');
+}
 function renderComp_(data) {
   const body = document.getElementById('cmp-body');
+  renderFiltroCmp_();
   if (!data || !data.dias) { body.innerHTML = '<p style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Sin datos</p>'; return; }
   window._cmpData = data;
+  if (cmpCanal) { renderCompCanal_(data, cmpCanal); return; }
   // tabla: filas = días (Lun–Vie), columnas = canales, celda = FALTAN de ese día/canal
   let html = '<table class="comp"><thead><tr><th class="canal" style="text-align:left;">Día</th>';
   CANALES.forEach(function (ch) { html += '<th>' + (LABELS[ch] || ch) + '</th>'; });
@@ -282,6 +302,26 @@ function renderComp_(data) {
   html += '<td>' + totSemana + '</td></tr></tfoot></table>';
   body.innerHTML = html;
 }
+// Vista de UN canal: por día → enviadas (Marketplace) · entregadas (Tráfico) · faltan.
+function renderCompCanal_(data, ch) {
+  const body = document.getElementById('cmp-body');
+  let html = '<table class="comp"><thead><tr><th class="canal" style="text-align:left;">Día · ' + (LABELS[ch] || ch) + '</th><th>Enviadas</th><th>Entregadas</th><th>Faltan</th></tr></thead><tbody>';
+  let tEnv = 0, tEnt = 0, tFal = 0;
+  data.dias.forEach(function (d, i) {
+    const pc = d.porCanal[ch] || { enviadas: 0, entregadas: 0, faltan: [] };
+    const esHoy = (d.fecha === data.hoy);
+    const diaNum = Number(d.fecha.split('-')[2]);
+    const nFal = pc.faltan.length, hayDetalle = nFal > 0;
+    tEnv += pc.enviadas; tEnt += pc.entregadas; tFal += nFal;
+    html += '<tr class="' + (hayDetalle ? 'click' : '') + '"' + (hayDetalle ? ' onclick="toggleDia_(' + i + ')"' : '') + '>';
+    html += '<td class="canal">' + d.nombre.slice(0, 3) + ' ' + diaNum + (esHoy ? ' · hoy' : '') + '</td>';
+    html += '<td>' + pc.enviadas + '</td><td>' + pc.entregadas + '</td>';
+    html += '<td class="faltan ' + (nFal === 0 ? 'cero' : '') + '">' + nFal + (hayDetalle ? ' ›' : ' ✓') + '</td></tr>';
+    html += '<tr class="detalle" id="det-' + i + '" style="display:none;"><td colspan="4"><div class="detalle-inner" id="det-inner-' + i + '"></div></td></tr>';
+  });
+  html += '</tbody><tfoot><tr><td class="canal">Semana</td><td>' + tEnv + '</td><td>' + tEnt + '</td><td>' + tFal + '</td></tr></tfoot></table>';
+  body.innerHTML = html;
+}
 function toggleDia_(i) {
   const row = document.getElementById('det-' + i);
   const inner = document.getElementById('det-inner-' + i);
@@ -289,7 +329,7 @@ function toggleDia_(i) {
   if (row.style.display === 'none') {
     const d = window._cmpData.dias[i];
     let html = '';
-    CANALES.forEach(function (ch) {
+    (cmpCanal ? [cmpCanal] : CANALES).forEach(function (ch) {
       const pc = d.porCanal[ch];
       if (!pc || !pc.faltan.length) return;
       html += '<div style="font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;">' + (LABELS[ch] || ch) + ' · faltan ' + pc.faltan.length + '</div>';

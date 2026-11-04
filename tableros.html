@@ -79,6 +79,16 @@
   .falta-row:last-child { border-bottom: none; }
   .falta-row .g { font-weight: 700; min-width: 150px; }
   .falta-row .s { color: var(--muted); min-width: 170px; }
+  /* Botón "enviado sin escáner" (4-nov-2026): cierra a mano una etiqueta que no se escaneó en Tráfico */
+  .btn-sin-escaner { margin-left: auto; flex-shrink: 0; cursor: pointer; font-size: 11px; font-weight: 700;
+    letter-spacing: .02em; color: var(--amber); background: #FFF5E6; border: 1px solid #F0D9B0;
+    border-radius: 7px; padding: 4px 10px; white-space: nowrap; }
+  .btn-sin-escaner:hover { background: #FBE8CC; }
+  .btn-sin-escaner:disabled { cursor: default; opacity: .9; }
+  .falta-row.resuelta { opacity: .55; }
+  .falta-row.resuelta .g { text-decoration: line-through; }
+  .btn-sin-escaner.ok { color: #00A86B; background: #E7F7EF; border-color: #BDE8D2; }
+  .btn-sin-escaner.err { color: var(--red); background: #FBE9E9; border-color: #EBC4C4; }
   .aviso { background: #FFF7E6; border: 1px solid #F0D9A0; border-radius: 4px; padding: 12px 16px; font-size: 12px; font-weight: 300; color: var(--amber); margin-bottom: 16px; line-height: 1.5; }
 </style>
 </head>
@@ -334,12 +344,44 @@ function toggleDia_(i) {
       if (!pc || !pc.faltan.length) return;
       html += '<div style="font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;">' + (LABELS[ch] || ch) + ' · faltan ' + pc.faltan.length + '</div>';
       html += pc.faltan.map(function (f) {
-        return '<div class="falta-row"><span class="g">' + (f.guia || '—') + '</span><span class="s">' + (f.sku || '') + '</span><span style="color:var(--muted);margin-left:auto;">' + (f.pedido || '') + '</span></div>';
+        return '<div class="falta-row" data-ch="' + ch + '" data-guia="' + encodeURIComponent(f.guia || '') + '" data-fecha="' + d.fecha + '">' +
+          '<span class="g">' + (f.guia || '—') + '</span>' +
+          '<span class="s">' + (f.sku || '') + '</span>' +
+          '<span style="color:var(--muted);">' + (f.pedido || '') + '</span>' +
+          '<button type="button" class="btn-sin-escaner" onclick="enviadoSinEscaner_(this)">📨 Enviado sin escáner</button>' +
+          '</div>';
       }).join('');
     });
     inner.innerHTML = html || '<p style="padding:8px 0;color:#00A86B;font-size:13px;">✓ Ese día todo lo enviado se escaneó en Tráfico.</p>';
     row.style.display = '';
   } else { row.style.display = 'none'; }
+}
+/* 4-nov-2026: cierra a mano una etiqueta que no se escaneó en Tráfico (sin pistola),
+   para que deje de contar como faltante en rojo. Llama al backend action=enviadoSinEscaner.
+   Los totales de la tabla se actualizan al recargar la semana. */
+async function enviadoSinEscaner_(btn) {
+  const row = btn.closest('.falta-row');
+  if (!row || btn.disabled) return;
+  const ch = row.dataset.ch || '';
+  const guia = decodeURIComponent(row.dataset.guia || '');
+  const fecha = row.dataset.fecha || '';
+  if (!guia) return;
+  btn.disabled = true; btn.className = 'btn-sin-escaner'; btn.textContent = 'Marcando…';
+  try {
+    const url = APPS_SCRIPT_URL + '?action=enviadoSinEscaner'
+      + '&channel=' + encodeURIComponent(ch)
+      + '&tracking=' + encodeURIComponent(guia)
+      + '&fecha=' + encodeURIComponent(fecha);
+    const res = await (await fetch(url, { redirect: 'follow' })).json();
+    if (res && res.ok) {
+      row.classList.add('resuelta');
+      btn.classList.add('ok'); btn.textContent = '✓ Enviado sin escáner';
+    } else {
+      btn.classList.add('err'); btn.textContent = '⚠ Reintentar'; btn.disabled = false;
+    }
+  } catch (e) {
+    btn.classList.add('err'); btn.textContent = '⚠ Reintentar'; btn.disabled = false;
+  }
 }
 document.getElementById('cmp-prev').addEventListener('click', function () { cmpOffset--; cargarSemanaCmp_(); });
 document.getElementById('cmp-next').addEventListener('click', function () { if (cmpOffset < 0) { cmpOffset++; cargarSemanaCmp_(); } });

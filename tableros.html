@@ -396,14 +396,55 @@ async function marcarFila_(row) {
     const res = await (await fetch(url, { redirect: 'follow' })).json();
     ok = !!(res && res.ok);
   } catch (e) { ok = false; }
+  pintarFila_(row, ok);
+  return ok;
+}
+function pintarFila_(row, ok) {
+  const btn = row.querySelector('.btn-sin-escaner');
   delete row.dataset.enCurso;
   if (ok) {
     row.classList.add('resuelta');
-    if (btn) { btn.classList.add('ok'); btn.textContent = '✓ Enviado sin escáner'; }
+    if (btn) { btn.disabled = true; btn.className = 'btn-sin-escaner ok'; btn.textContent = '✓ Enviado sin escáner'; }
   } else if (btn) {
-    btn.classList.add('err'); btn.textContent = '⚠ Reintentar'; btn.disabled = false;
+    btn.className = 'btn-sin-escaner err'; btn.textContent = '⚠ Reintentar'; btn.disabled = false;
   }
-  return ok;
+}
+/* 5-nov-2026: manda TODAS las faltantes del día en UNA sola llamada (POST action=enviadoSinEscanerDia).
+   El motor cierra exactamente las guías que van en la lista. Devuelve { ok, mal } con cuántas filas
+   quedaron marcadas, o null si el motor todavía no conoce esta acción (entonces se marca una por una). */
+async function marcarLote_(filas) {
+  const canales = {};
+  let fecha = '';
+  filas.forEach(function (row) {
+    const ch = row.dataset.ch || '';
+    fecha = fecha || row.dataset.fecha || '';
+    (canales[ch] = canales[ch] || []).push(decodeURIComponent(row.dataset.guia || ''));
+    row.dataset.enCurso = '1';
+    const btn = row.querySelector('.btn-sin-escaner');
+    if (btn) { btn.disabled = true; btn.className = 'btn-sin-escaner'; btn.textContent = 'Marcando…'; }
+  });
+  let res = null, sinRed = false;
+  try {
+    res = await (await fetch(APPS_SCRIPT_URL, { method: 'POST', redirect: 'follow',
+      body: JSON.stringify({ action: 'enviadoSinEscanerDia', fecha: fecha, canales: canales }) })).json();
+  } catch (e) { sinRed = true; }
+  if (!sinRed && !(res && res.lote === true)) {          // motor viejo: se regresa todo a como estaba
+    filas.forEach(function (row) {
+      delete row.dataset.enCurso;
+      const btn = row.querySelector('.btn-sin-escaner');
+      if (btn) { btn.disabled = false; btn.textContent = '📨 Enviado sin escáner'; }
+    });
+    return null;
+  }
+  let ok = 0, mal = 0;
+  filas.forEach(function (row) {
+    const c = !sinRed && res.canales ? res.canales[row.dataset.ch || ''] : null;
+    const guia = decodeURIComponent(row.dataset.guia || '');
+    const bien = !!c && !c.error && (c.noHalladas || []).indexOf(guia) === -1;
+    pintarFila_(row, bien);
+    if (bien) ok++; else mal++;
+  });
+  return { ok: ok, mal: mal, sinRed: sinRed };
 }
 async function enviadoSinEscaner_(btn) {
   const row = btn.closest('.falta-row');
@@ -414,8 +455,8 @@ async function enviadoSinEscaner_(btn) {
 
 /* 5-nov-2026: botón GLOBAL del día. Cierra todas las faltantes que se ven en el detalle
    (todo el día, o solo el canal elegido en el filtro) sin ir etiqueta por etiqueta.
-   Pide confirmación porque escribe "Entregado" en la hoja real. Marca una tras otra
-   con la misma acción del botón individual, así que no cambia nada en Apps Script. */
+   Pide confirmación porque escribe "Entregado" en la hoja real. Manda todo el día en UNA sola
+   llamada (marcarLote_); si el motor aún no la conoce, marca una tras otra como antes. */
 function textoTodoElDia_(n) { return '📨 Marcar todo el día como enviado sin escáner (' + n + ')'; }
 function barraTodoElDia_(n) {
   return '<div class="todo-dia">' +
@@ -469,10 +510,15 @@ async function marcarTodoElDia_(el) {
   bar.querySelector('.todo-conf').style.display = 'none';
   main.style.display = ''; main.disabled = true;
   res.className = 'todo-msg todo-res'; res.textContent = '';
-  let ok = 0, mal = 0;
-  for (let i = 0; i < filas.length; i++) {
-    main.textContent = 'Marcando ' + (i + 1) + ' de ' + filas.length + '…';
-    if (await marcarFila_(filas[i])) ok++; else mal++;
+  let ok = 0, mal = 0, sinRed = false;
+  main.textContent = 'Marcando ' + filas.length + (filas.length === 1 ? ' etiqueta…' : ' etiquetas…');
+  const lote = await marcarLote_(filas);
+  if (lote) { ok = lote.ok; mal = lote.mal; sinRed = lote.sinRed; }
+  else {
+    for (let i = 0; i < filas.length; i++) {
+      main.textContent = 'Marcando ' + (i + 1) + ' de ' + filas.length + '…';
+      if (await marcarFila_(filas[i])) ok++; else mal++;
+    }
   }
   delete bar.dataset.enCurso;
   main.disabled = false;
@@ -480,8 +526,10 @@ async function marcarTodoElDia_(el) {
   if (quedan) { main.textContent = '📨 Reintentar ' + (quedan === 1 ? 'la que falta' : 'las ' + quedan + ' que faltan'); }
   else { main.style.display = 'none'; }
   res.className = 'todo-msg todo-res ' + (mal ? 'err' : 'ok');
-  res.textContent = '✓ ' + ok + (ok === 1 ? ' etiqueta marcada como enviada' : ' etiquetas marcadas como enviadas') + ' sin escáner.' +
-    (mal ? ' ⚠ ' + mal + (mal === 1 ? ' no se pudo marcar.' : ' no se pudieron marcar.') : ' Los totales se actualizan al recargar la semana.');
+  res.textContent = sinRed
+    ? '⚠ No hubo conexión con el servidor. Espera un momento y vuelve a intentar.'
+    : '✓ ' + ok + (ok === 1 ? ' etiqueta marcada como enviada' : ' etiquetas marcadas como enviadas') + ' sin escáner.' +
+      (mal ? ' ⚠ ' + mal + (mal === 1 ? ' no se pudo marcar.' : ' no se pudieron marcar.') : ' Los totales se actualizan al recargar la semana.');
 }
 document.getElementById('cmp-prev').addEventListener('click', function () { cmpOffset--; cargarSemanaCmp_(); });
 document.getElementById('cmp-next').addEventListener('click', function () { if (cmpOffset < 0) { cmpOffset++; cargarSemanaCmp_(); } });

@@ -9,7 +9,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --black: #0D0D0D; --white: #FFFFFF; --surface: #F5F5F5;
-    --border: #E8E8E8; --muted: #999999; --amber: #C97A00; --red: #C00000;
+    --border: #E8E8E8; --muted: #999999; --amber: #C97A00; --red: #C00000; --green: #00A86B;
   }
   body {
     font-family: 'Montserrat', -apple-system, sans-serif;
@@ -99,6 +99,60 @@
   .todo-msg { font-size: 12px; font-weight: 700; }
   .todo-msg.ok { color: #00A86B; }
   .todo-msg.err { color: var(--red); }
+  /* ── Paquetes (6-nov-2026): control de paquetes por canal, leído de la hoja de Ventas ── */
+  .pq-controles { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: flex-end; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .pq-grupo { display: flex; flex-direction: column; gap: 6px; }
+  .pq-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .pq-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  #panel-paquetes input[type=date], #panel-paquetes input[type=text], #panel-paquetes select { font-family: inherit; font-size: 13px; font-weight: 300; padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--white); color: var(--black); }
+  #panel-paquetes input[type=text] { width: 100%; max-width: 420px; padding: 10px 12px; }
+  .pq-sub { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding: 0 10px; }
+  .pq-subtab { background: none; border: none; border-bottom: 3px solid transparent; padding: 14px 14px 11px; font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+  .pq-subtab.active { color: var(--black); border-bottom-color: var(--black); }
+  .pq-cont { padding: 18px; }
+  .pq-vista { display: none; }
+  .pq-vista.active { display: block; }
+  .pq-estado { font-size: 12px; font-weight: 700; margin-bottom: 14px; line-height: 1.6; }
+  .pq-estado:empty { display: none; }
+  .pq-estado .carga { color: var(--muted); font-weight: 300; }
+  .pq-estado .mal { color: var(--red); }
+  .pq-estado button { cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 700; color: var(--black); background: var(--white); border: 1px solid var(--border); border-radius: 7px; padding: 4px 10px; margin-left: 6px; }
+  .pq-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .pq-kpi { border: 1px solid var(--border); border-radius: 4px; padding: 14px 16px; }
+  .pq-kpi .k { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); line-height: 1.4; }
+  .pq-kpi .v { font-size: 30px; font-weight: 900; line-height: 1.1; margin-top: 6px; }
+  .pq-kpi .d { font-size: 11px; font-weight: 700; margin-top: 5px; color: var(--muted); }
+  .pq-kpi .d.falta { color: var(--red); }
+  .pq-kpi .d.ok { color: var(--green); }
+  h3.pq { font-size: 12px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; margin: 26px 0 8px; }
+  .pq-scroll { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; }
+  table.pq { width: 100%; border-collapse: collapse; font-size: 16px; }
+  table.pq th, table.pq td { padding: 12px 12px; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  table.pq thead th { font-size: 11px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--surface); }
+  table.pq td { font-weight: 700; }
+  table.pq td.nom, table.pq th.nom { text-align: left; }
+  table.pq td.cero { color: var(--muted); font-weight: 200; }
+  table.pq tbody tr:last-child td { border-bottom: none; }
+  table.pq tfoot td { font-weight: 900; background: var(--black); color: var(--white); border-bottom: none; }
+  .pq-mini { display: block; font-size: 10px; font-weight: 700; letter-spacing: .02em; margin-top: 2px; }
+  .pq-mini.falta { color: var(--red); }
+  .pq-mini.ok { color: var(--green); }
+  tfoot .pq-mini.falta { color: #FF9C9C; }
+  tfoot .pq-mini.ok { color: #7BE0B5; }
+  .pq-vacio { padding: 26px 10px; text-align: center; font-size: 13px; font-weight: 300; color: var(--muted); }
+  .pq-fila { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: flex-end; margin-bottom: 16px; }
+  .pq-graf { position: relative; border: 1px solid var(--border); border-radius: 4px; padding: 14px 10px 6px; }
+  .pq-graf svg { display: block; width: 100%; height: auto; }
+  .pq-graf .barra { fill: var(--black); }
+  .pq-graf g.b:hover .barra { fill: #555; }
+  .pq-tip { position: absolute; pointer-events: none; background: var(--black); color: var(--white); border-radius: 4px; padding: 8px 10px; font-size: 11px; font-weight: 300; line-height: 1.5; white-space: nowrap; display: none; z-index: 2; }
+  .pq-tip b { font-weight: 900; font-size: 13px; }
+  .pq-est { display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 4px 10px; border: 1px solid; }
+  .pq-est.e3 { color: var(--green); background: #E7F7EF; border-color: #BDE8D2; }
+  .pq-est.e1, .pq-est.e2 { color: var(--amber); background: #FFF5E6; border-color: #F0D9B0; }
+  .pq-est.e0 { color: var(--red); background: #FBE9E9; border-color: #EBC4C4; }
+  .pq-est.e4 { color: var(--muted); background: var(--surface); border-color: var(--border); }
+  .pq-mas { color: var(--green); } .pq-menos { color: var(--red); }
   .aviso { background: #FFF7E6; border: 1px solid #F0D9A0; border-radius: 4px; padding: 12px 16px; font-size: 12px; font-weight: 300; color: var(--amber); margin-bottom: 16px; line-height: 1.5; }
 </style>
 </head>
@@ -111,13 +165,14 @@
       <h1>Tableros del Scanner</h1>
     </div>
   </div>
-  <p class="subtitle">Todo en un solo lugar: lo escaneado en Marketplace, en Tráfico y en Devoluciones, y el comparativo Marketplace vs Tráfico para ver qué etiqueta no hizo match.</p>
+  <p class="subtitle">Todo en un solo lugar: lo escaneado en Marketplace, en Tráfico y en Devoluciones, el comparativo Marketplace vs Tráfico para ver qué etiqueta no hizo match, y el control de paquetes por canal.</p>
 
   <div class="tabs">
     <button class="tab active" data-tab="envios" onclick="setTab('envios')">📦 Marketplace</button>
     <button class="tab" data-tab="trafico" onclick="setTab('trafico')">🚦 Tráfico</button>
     <button class="tab" data-tab="devoluciones" onclick="setTab('devoluciones')">↩️ Devoluciones</button>
     <button class="tab" data-tab="comparativo" onclick="setTab('comparativo')">🔀 Comparativo</button>
+    <button class="tab" data-tab="paquetes" onclick="setTab('paquetes')">🧾 Paquetes</button>
   </div>
 
   <!-- ENVÍOS -->
@@ -172,6 +227,71 @@
     </div>
     <p class="nota">Por semana (Lun–Vie) y canal: cuántas etiquetas <b>faltan</b> (se escanearon en Marketplace pero NO en Tráfico) cada día. Elige un canal arriba para verlo solo (enviadas · entregadas · faltan). Toca un día para ver el detalle de las etiquetas que no machearon; ahí puedes cerrarlas una por una o todas las del día con un solo botón.</p>
   </div>
+
+  <!-- PAQUETES (6-nov-2026): control de paquetes por canal -->
+  <div class="panel" id="panel-paquetes">
+    <div class="tablero">
+      <div class="tablero-head" style="min-height:70px;"><span class="tablero-titulo" id="pq-titulo">Paquetes</span></div>
+
+      <div class="pq-controles">
+        <div class="pq-grupo">
+          <span class="pq-label">Periodo</span>
+          <div class="pq-chips" id="pq-rapidos">
+            <button class="chip-canal" data-dias="0" type="button">Hoy</button>
+            <button class="chip-canal active" data-dias="6" type="button">1 semana</button>
+            <button class="chip-canal" data-dias="29" type="button">1 mes</button>
+          </div>
+        </div>
+        <div class="pq-grupo"><label class="pq-label" for="pq-desde">Desde</label><input type="date" id="pq-desde"></div>
+        <div class="pq-grupo"><label class="pq-label" for="pq-hasta">Hasta</label><input type="date" id="pq-hasta"></div>
+      </div>
+
+      <div class="pq-sub" id="pq-sub">
+        <button class="pq-subtab active" data-vista="resumen" type="button">Resumen</button>
+        <button class="pq-subtab" data-vista="grafica" type="button">Gráfica</button>
+        <button class="pq-subtab" data-vista="comparar" type="button">Comparar</button>
+        <button class="pq-subtab" data-vista="buscar" type="button">Buscar</button>
+      </div>
+
+      <div class="pq-cont">
+        <div class="pq-estado" id="pq-estado"></div>
+
+        <div class="pq-vista active" id="pq-resumen"></div>
+
+        <div class="pq-vista" id="pq-grafica">
+          <div class="pq-fila">
+            <div class="pq-grupo"><span class="pq-label">Ver por</span>
+              <div class="pq-chips" id="pq-verpor">
+                <button class="chip-canal active" data-v="dia" type="button">Día</button>
+                <button class="chip-canal" data-v="semana" type="button">Semana</button>
+                <button class="chip-canal" data-v="mes" type="button">Mes</button>
+              </div></div>
+            <div class="pq-grupo"><span class="pq-label">Medida</span>
+              <div class="pq-chips" id="pq-medida">
+                <button class="chip-canal active" data-v="pedidos" type="button">Pedidos (paquetes)</button>
+                <button class="chip-canal" data-v="piezas" type="button">Piezas</button>
+              </div></div>
+          </div>
+          <div class="pq-graf" id="pq-graf"><div class="pq-tip" id="pq-tip"></div><div id="pq-svg"></div></div>
+        </div>
+
+        <div class="pq-vista" id="pq-comparar">
+          <div class="pq-fila">
+            <div class="pq-grupo"><label class="pq-label" for="pq-a">Periodo A</label><select id="pq-a"></select></div>
+            <div class="pq-grupo"><label class="pq-label" for="pq-b">Periodo B</label><select id="pq-b"></select></div>
+          </div>
+          <div id="pq-cmp"></div>
+        </div>
+
+        <div class="pq-vista" id="pq-buscar">
+          <div class="pq-grupo" style="margin-bottom:16px;"><label class="pq-label" for="pq-q">Busca un número de pedido o un canal</label>
+            <input type="text" id="pq-q" placeholder="Ejemplo: SHEIN o 5781" autocomplete="off"></div>
+          <div id="pq-res"></div>
+        </div>
+      </div>
+    </div>
+    <p class="nota">Pedidos y piezas por canal, contados igual que en el tablero de eCommerce: las filas del mismo pedido son un solo paquete, y un pedido con más de 1 pieza es <b>Múltiple</b>. <b>Escaneados</b> = ya tienen evidencia en Marketplace. <b>Entregados</b> = ya pasaron por Tráfico. Los pedidos cancelados no se cuentan. Sale directo de la hoja de Ventas y se actualiza solo cada 10 minutos.</p>
+  </div>
 </div>
 
 <script>
@@ -187,6 +307,7 @@ function setTab(t) {
   if (t === 'trafico' && !traCargado) { traCargado = true; cargarSemanaTra_(); }
   if (t === 'comparativo' && !cmpCargado) { cmpCargado = true; cargarSemanaCmp_(); }
   if (t === 'devoluciones' && !devCargado) { devCargado = true; cargarSemanaDev_(); }
+  if (t === 'paquetes') Paquetes.abrir();
 }
 
 /* ---------- Helpers de semana (compartidos Envíos/Tráfico) ---------- */
@@ -533,6 +654,361 @@ async function marcarTodoElDia_(el) {
 }
 document.getElementById('cmp-prev').addEventListener('click', function () { cmpOffset--; cargarSemanaCmp_(); });
 document.getElementById('cmp-next').addEventListener('click', function () { if (cmpOffset < 0) { cmpOffset++; cargarSemanaCmp_(); } });
+
+/* ---------- PAQUETES (6-nov-2026): control de paquetes por canal ----------
+   Es el tablero de paquetes de eCommerce (Miguel), pero leído de la hoja de Ventas
+   (?action=paquetesMes&mes=YYYY-MM): pedidos y piezas por canal, cuántos ya se escanearon
+   en Marketplace y cuántos ya pasaron por Tráfico. Solo lectura. Se pide por mes: al abrir,
+   el mes en curso y el anterior; los más viejos, cuando se elige una fecha de esos meses.
+   estado de cada pedido: +1 escaneado · +2 entregado (3 = las dos) · 4 = cancelado (no se cuenta). */
+const Paquetes = (function () {
+  const MESES_ATRAS = 12;                 // hasta dónde se puede ir hacia atrás con "Desde"
+  const REFRESCO_MS = 5 * 60 * 1000;      // el mes en curso se vuelve a pedir cada 5 min con la pestaña abierta
+  const $ = function (id) { return document.getElementById(id); };
+  const esc = function (t) { return String(t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  const fmt = function (n) { return Number(n).toLocaleString('es-MX'); };
+  const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const aFecha = function (f) { return new Date(f + 'T12:00:00'); };
+  const menosDias = function (f, n) { const d = aFecha(f); d.setDate(d.getDate() - n); return fechaKey_(d); };
+  const lunesDe = function (f) { const d = aFecha(f); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return fechaKey_(d); };
+  const corta = function (f) { const d = aFecha(f); return d.getDate() + ' ' + MESES[d.getMonth()]; };
+  const conDia = function (f) { const d = aFecha(f); return DIAS[d.getDay()] + ' ' + d.getDate() + ' ' + MESES[d.getMonth()]; };
+  const mesLargo = function (k) { const p = k.split('-'); return MESES_LARGO[+p[1] - 1].toLowerCase() + ' ' + p[0]; };
+  const nombreCanal = function (c) { return LABELS[c] || c; };
+
+  let HOY = fechaKey_(new Date());        // el de esta computadora, hasta que el servidor diga el suyo
+  let abierto = false, tocado = false;    // tocado = la persona ya eligió un rango (no se le cambia solo)
+  let vista = 'resumen', verPor = 'dia', medida = 'pedidos';
+  const meses = {};                       // 'YYYY-MM' → { estado: 'cargando' | 'ok' | 'error', pidiendo, t, lista, errores }
+  let P = [];                             // pedidos cargados que SÍ cuentan (sin cancelados)
+  let CANCELADOS = [];                    // pedidos cancelados (solo se ven en Buscar y como aviso)
+  const cola = []; let activos = 0;
+
+  /* ---------- Carga por mes ---------- */
+  function mesMinimo() { const d = aFecha(HOY.slice(0, 7) + '-01'); d.setMonth(d.getMonth() - MESES_ATRAS); return fechaKey_(d).slice(0, 7); }
+  function mesAnterior() { return menosDias(HOY.slice(0, 7) + '-01', 1).slice(0, 7); }
+  function rango() {
+    let d = $('pq-desde').value || (mesMinimo() + '-01'), h = $('pq-hasta').value || HOY;
+    if (d > h) { const t = d; d = h; h = t; }
+    return { d: d, h: h };
+  }
+  function mesesDelRango() {
+    const r = rango(), out = [], min = mesMinimo(), max = HOY.slice(0, 7);
+    let m = r.d.slice(0, 7) < min ? min : r.d.slice(0, 7);
+    const fin = r.h.slice(0, 7) > max ? max : r.h.slice(0, 7);
+    while (m <= fin && out.length < MESES_ATRAS + 2) {
+      out.push(m);
+      const p = m.split('-'); const d = new Date(+p[0], +p[1], 1, 12);   // día 1 del mes siguiente
+      m = fechaKey_(d).slice(0, 7);
+    }
+    return out;
+  }
+  function asegurar() {
+    const lista = mesesDelRango();
+    [HOY.slice(0, 7), mesAnterior()].forEach(function (m) { if (lista.indexOf(m) === -1) lista.push(m); });
+    lista.forEach(function (m) { if (!meses[m]) pedir(m); });
+  }
+  function pedir(mes) {
+    let m = meses[mes];
+    if (m && m.pidiendo) return;
+    if (!m) m = meses[mes] = { estado: 'cargando', lista: [], errores: {}, t: 0 };
+    else if (m.estado === 'error') m.estado = 'cargando';
+    m.pidiendo = true;
+    cola.push(mes); bombear();
+  }
+  function bombear() {                    // máximo 3 consultas al mismo tiempo
+    while (activos < 3 && cola.length) { activos++; traer(cola.shift()).then(function () { activos--; bombear(); }); }
+  }
+  async function traer(mes) {
+    const m = meses[mes];
+    let data = null;
+    try { data = await (await fetch(APPS_SCRIPT_URL + '?action=paquetesMes&mes=' + mes, { redirect: 'follow' })).json(); } catch (e) {}
+    m.pidiendo = false;
+    if (data && Array.isArray(data.pedidos) && Array.isArray(data.fechas) && Array.isArray(data.canales)) {
+      m.estado = 'ok'; m.t = Date.now(); m.errores = data.errores || {};
+      m.lista = data.pedidos.map(function (a) {
+        return { fecha: data.fechas[a[0]], canal: data.canales[a[1]], pedido: String(a[2]), piezas: Number(a[3]) || 0, estado: Number(a[4]) || 0 };
+      });
+      if (/^\d{4}-\d{2}-\d{2}$/.test(data.hoy || '') && data.hoy !== HOY) { HOY = data.hoy; limites(); if (!tocado) rangoInicial(); }
+    } else if (m.estado !== 'ok') { m.estado = 'error'; }   // si era un refresco y falló, se queda con lo que ya tenía
+    rearmar();
+  }
+  function rearmar() {
+    P = []; CANCELADOS = [];
+    Object.keys(meses).sort().forEach(function (k) {
+      meses[k].lista.forEach(function (p) { (p.estado === 4 ? CANCELADOS : P).push(p); });
+    });
+    opcionesComparar();
+    asegurar();
+    render();
+  }
+  function refrescarSiViejo() {
+    if (!abierto || document.hidden || !$('panel-paquetes').classList.contains('active')) return;
+    const ahora = Date.now(), actual = meses[HOY.slice(0, 7)], previo = meses[mesAnterior()];
+    if (actual && actual.estado === 'ok' && ahora - actual.t > REFRESCO_MS) pedir(HOY.slice(0, 7));
+    if (previo && previo.estado === 'ok' && ahora - previo.t > 6 * REFRESCO_MS) pedir(mesAnterior());
+  }
+
+  /* ---------- Cuentas (se cuenta por pedido; Múltiple = más de 1 pieza) ---------- */
+  function sumar(lista) {
+    const r = { pedidos: lista.length, piezas: 0, normales: 0, multiples: 0, escaneados: 0, entregados: 0 };
+    lista.forEach(function (p) {
+      r.piezas += p.piezas;
+      if (p.piezas > 1) r.multiples++; else r.normales++;
+      if (p.estado & 1) r.escaneados++;
+      if (p.estado & 2) r.entregados++;
+    });
+    return r;
+  }
+  function agrupar(lista, clave) {
+    const m = {};
+    lista.forEach(function (p) { const k = clave(p); (m[k] = m[k] || []).push(p); });
+    return m;
+  }
+  function enRango(lista) { const r = rango(); return lista.filter(function (p) { return p.fecha >= r.d && p.fecha <= r.h; }); }
+  function avance(n, total) {
+    if (!total) return '0';
+    const falta = total - n;
+    return fmt(n) + (falta > 0 ? '<span class="pq-mini falta">faltan ' + fmt(falta) + '</span>' : '<span class="pq-mini ok">completo</span>');
+  }
+  function num(n) { return '<td class="' + (n ? '' : 'cero') + '">' + fmt(n) + '</td>'; }
+  function tabla(primera, filas, total) {
+    let h = '<div class="pq-scroll"><table class="pq"><thead><tr><th class="nom">' + primera + '</th><th>Pedidos</th><th>Piezas</th><th>Normales</th><th>Múltiples</th><th>Escaneados</th><th>Entregados</th></tr></thead><tbody>';
+    filas.forEach(function (f) {
+      const a = f.a;
+      h += '<tr><td class="nom">' + esc(f.nombre) + '</td>' + num(a.pedidos) + num(a.piezas) + num(a.normales) + num(a.multiples) + '<td>' + avance(a.escaneados, a.pedidos) + '</td><td>' + avance(a.entregados, a.pedidos) + '</td></tr>';
+    });
+    h += '</tbody>';
+    if (total) h += '<tfoot><tr><td class="nom">Total</td><td>' + fmt(total.pedidos) + '</td><td>' + fmt(total.piezas) + '</td><td>' + fmt(total.normales) + '</td><td>' + fmt(total.multiples) + '</td><td>' + avance(total.escaneados, total.pedidos) + '</td><td>' + avance(total.entregados, total.pedidos) + '</td></tr></tfoot>';
+    return h + '</table></div>';
+  }
+  function cargandoRango() { return mesesDelRango().some(function (m) { return !meses[m] || meses[m].estado === 'cargando'; }); }
+
+  /* ---------- RESUMEN ---------- */
+  function renderResumen() {
+    const lista = enRango(P);
+    if (!lista.length) { $('pq-resumen').innerHTML = '<div class="pq-vacio">' + (cargandoRango() ? 'Cargando…' : 'No hay pedidos en este rango.') + '</div>'; return; }
+    const t = sumar(lista);
+    const pct = function (n) { return Math.round(n / t.pedidos * 100) + '%'; };
+    const det = function (n) { const f = t.pedidos - n; return f > 0 ? '<div class="d falta">' + pct(n) + ' · faltan ' + fmt(f) + '</div>' : '<div class="d ok">100% · completo</div>'; };
+    let h = '<div class="pq-kpis">'
+      + '<div class="pq-kpi"><div class="k">Pedidos (paquetes)</div><div class="v">' + fmt(t.pedidos) + '</div></div>'
+      + '<div class="pq-kpi"><div class="k">Piezas</div><div class="v">' + fmt(t.piezas) + '</div></div>'
+      + '<div class="pq-kpi"><div class="k">Normales (1 pieza)</div><div class="v">' + fmt(t.normales) + '</div><div class="d">' + pct(t.normales) + ' de los pedidos</div></div>'
+      + '<div class="pq-kpi"><div class="k">Múltiples (más de 1 pieza)</div><div class="v">' + fmt(t.multiples) + '</div><div class="d">' + pct(t.multiples) + ' de los pedidos</div></div>'
+      + '<div class="pq-kpi"><div class="k">Escaneados con evidencia</div><div class="v">' + fmt(t.escaneados) + '</div>' + det(t.escaneados) + '</div>'
+      + '<div class="pq-kpi"><div class="k">Entregados en Tráfico</div><div class="v">' + fmt(t.entregados) + '</div>' + det(t.entregados) + '</div>'
+      + '</div>';
+
+    const porCanal = agrupar(lista, function (p) { return p.canal; });
+    h += '<h3 class="pq">Pedidos por canal</h3>' + tabla('Canal',
+      Object.keys(porCanal).map(function (c) { return { nombre: nombreCanal(c), a: sumar(porCanal[c]) }; })
+        .sort(function (x, y) { return y.a.pedidos - x.a.pedidos; }), t);
+
+    const porDia = agrupar(lista, function (p) { return p.fecha; });
+    h += '<h3 class="pq">Pedidos por día</h3>' + tabla('Día',
+      Object.keys(porDia).sort().reverse().map(function (f) { return { nombre: conDia(f) + (f === HOY ? ' · hoy' : ''), a: sumar(porDia[f]) }; }), t);
+
+    const porSem = agrupar(lista, function (p) { return lunesDe(p.fecha); });
+    h += '<h3 class="pq">Pedidos por semana (inicia lunes)</h3>' + tabla('Semana',
+      Object.keys(porSem).sort().reverse().map(function (s) { return { nombre: 'Semana del ' + corta(s), a: sumar(porSem[s]) }; }), null);
+
+    const nCan = enRango(CANCELADOS).length;
+    if (nCan) h += '<p class="nota">' + fmt(nCan) + (nCan === 1 ? ' pedido cancelado' : ' pedidos cancelados') + ' en este rango no se ' + (nCan === 1 ? 'cuenta' : 'cuentan') + ' (se pueden ver en Buscar).</p>';
+    $('pq-resumen').innerHTML = h;
+  }
+
+  /* ---------- GRÁFICA ---------- */
+  function claveDe(p, modo) { return modo === 'semana' ? lunesDe(p.fecha) : modo === 'mes' ? p.fecha.slice(0, 7) : p.fecha; }
+  function etiquetaDe(k, modo) { return modo === 'mes' ? mesLargo(k) : modo === 'semana' ? 'Sem. ' + corta(k) : conDia(k); }
+  function serie() {
+    const g = agrupar(enRango(P), function (p) { return claveDe(p, verPor); });
+    let keys = Object.keys(g).sort();
+    if (verPor === 'dia' && keys.length) {            // días seguidos, aunque alguno venga en cero
+      const out = [], d = aFecha(keys[0]), fin = aFecha(keys[keys.length - 1]);
+      while (d <= fin) { out.push(fechaKey_(d)); d.setDate(d.getDate() + 1); }
+      keys = out;
+    }
+    return keys.map(function (k) { const a = sumar(g[k] || []); return { k: k, label: etiquetaDe(k, verPor), value: a[medida], a: a }; });
+  }
+  function renderGrafica() {
+    const items = serie(), cont = $('pq-svg');
+    if (!items.length) { cont.innerHTML = '<div class="pq-vacio">' + (cargandoRango() ? 'Cargando…' : 'No hay datos para graficar.') + '</div>'; return; }
+    const W = Math.max(320, $('pq-graf').clientWidth - 20), H = 300, izq = 44, der = 10, arriba = 26, base = 236;
+    const n = items.length, paso = (W - izq - der) / n, ancho = Math.max(4, Math.min(34, paso * 0.62));
+    const max = Math.max(1, Math.max.apply(null, items.map(function (i) { return i.value; })));
+    const pot = Math.pow(10, Math.floor(Math.log10(max))), cand = [1, 2, 2.5, 5, 10].map(function (m) { return m * pot; });
+    const tick = cand.find(function (c) { return max / c <= 4; }) || cand[cand.length - 1], tope = Math.ceil(max / tick) * tick;
+    const y = function (v) { return base - (v / tope) * (base - arriba); };
+    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + (medida === 'piezas' ? 'Piezas' : 'Pedidos') + ' por ' + verPor + '" font-family="Montserrat, sans-serif">';
+    for (let v = 0; v <= tope + 1e-9; v += tick) {
+      s += '<line x1="' + izq + '" x2="' + (W - der) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="' + (v === 0 ? '#0D0D0D' : '#E8E8E8') + '" stroke-width="1"/>';
+      s += '<text x="' + (izq - 8) + '" y="' + (y(v) + 4) + '" font-size="10" text-anchor="end" fill="#999">' + fmt(v) + '</text>';
+    }
+    const cada = Math.ceil(n / Math.max(1, Math.floor((W - izq - der) / 58)));
+    items.forEach(function (it, i) {
+      const cx = izq + paso * i + paso / 2, x = cx - ancho / 2, yy = y(it.value), h = base - yy, r = Math.min(4, ancho / 2, h);
+      s += '<g class="b" data-i="' + i + '">';
+      s += '<rect x="' + (izq + paso * i) + '" y="' + arriba + '" width="' + paso + '" height="' + (base - arriba) + '" fill="transparent"/>';
+      if (h > 0) s += '<path class="barra" d="M' + x + ',' + base + ' V' + (yy + r) + ' Q' + x + ',' + yy + ' ' + (x + r) + ',' + yy + ' H' + (x + ancho - r) + ' Q' + (x + ancho) + ',' + yy + ' ' + (x + ancho) + ',' + (yy + r) + ' V' + base + ' Z"/>';
+      if (n <= 12) s += '<text x="' + cx + '" y="' + (yy - 7) + '" font-size="11" font-weight="700" text-anchor="middle" fill="#0D0D0D">' + fmt(it.value) + '</text>';
+      s += '</g>';
+      if (i % cada === 0) {
+        const partes = it.label.split(' ');
+        if (verPor === 'dia') {
+          s += '<text x="' + cx + '" y="' + (base + 17) + '" font-size="10" font-weight="700" text-anchor="middle" fill="#0D0D0D">' + partes[1] + '</text>';
+          s += '<text x="' + cx + '" y="' + (base + 30) + '" font-size="9" text-anchor="middle" fill="#999">' + partes[0] + '</text>';
+        } else s += '<text x="' + cx + '" y="' + (base + 18) + '" font-size="10" font-weight="700" text-anchor="middle" fill="#0D0D0D">' + esc(it.label) + '</text>';
+      }
+    });
+    if (verPor === 'dia') s += '<text x="' + izq + '" y="' + (H - 6) + '" font-size="9" fill="#999">' + esc(corta(items[0].k) + ' a ' + corta(items[n - 1].k)) + '</text>';
+    cont.innerHTML = s + '</svg>';
+    const tip = $('pq-tip');
+    cont.querySelectorAll('g.b').forEach(function (g) {
+      g.addEventListener('mousemove', function (ev) {
+        const it = items[+g.dataset.i], caja = $('pq-graf').getBoundingClientRect();
+        tip.innerHTML = esc(it.label) + '<br><b>' + fmt(it.a.pedidos) + '</b> pedidos · <b>' + fmt(it.a.piezas) + '</b> piezas<br>' + fmt(it.a.normales) + ' normales · ' + fmt(it.a.multiples) + ' múltiples<br>' + fmt(it.a.escaneados) + ' escaneados · ' + fmt(it.a.entregados) + ' entregados';
+        tip.style.display = 'block';
+        const x = ev.clientX - caja.left, tw = tip.offsetWidth;
+        tip.style.left = Math.max(4, Math.min(caja.width - tw - 4, x - tw / 2)) + 'px';
+        tip.style.top = Math.max(4, ev.clientY - caja.top - tip.offsetHeight - 14) + 'px';
+      });
+      g.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+    });
+  }
+
+  /* ---------- COMPARAR ---------- */
+  function opcionesComparar() {
+    const uni = function (f) { return Array.from(new Set(P.map(f))).sort().reverse(); };
+    const dias = uni(function (p) { return p.fecha; }), sems = uni(function (p) { return lunesDe(p.fecha); }), mss = uni(function (p) { return p.fecha.slice(0, 7); });
+    const opt = function (v, t) { return '<option value="' + v + '">' + esc(t) + '</option>'; };
+    const html = '<optgroup label="Días">' + dias.map(function (d) { return opt('dia|' + d, conDia(d)); }).join('') + '</optgroup>'
+      + '<optgroup label="Semanas">' + sems.map(function (s) { return opt('semana|' + s, 'Semana del ' + corta(s)); }).join('') + '</optgroup>'
+      + '<optgroup label="Meses">' + mss.map(function (m) { return opt('mes|' + m, mesLargo(m)); }).join('') + '</optgroup>';
+    const eraA = $('pq-a').value, eraB = $('pq-b').value;      // se respeta lo que la persona ya había elegido
+    $('pq-a').innerHTML = html; $('pq-b').innerHTML = html;
+    const poner = function (sel, era, def) {
+      if (era) sel.value = era;
+      if (!era || sel.value !== era) { if (def) sel.value = def; }
+    };
+    poner($('pq-a'), eraA, sems.length ? 'semana|' + sems[0] : '');
+    poner($('pq-b'), eraB, sems.length > 1 ? 'semana|' + sems[1] : '');
+  }
+  function periodo(sel) {
+    const p = sel.split('|');
+    const a = sumar(P.filter(function (x) { return claveDe(x, p[0]) === p[1]; }));
+    a.nombre = p[0] === 'dia' ? conDia(p[1]) : p[0] === 'semana' ? 'Semana del ' + corta(p[1]) : mesLargo(p[1]);
+    return a;
+  }
+  function renderComparar() {
+    if (!$('pq-a').value || !$('pq-b').value) { $('pq-cmp').innerHTML = '<div class="pq-vacio">' + (cargandoRango() ? 'Cargando…' : 'Todavía no hay pedidos para comparar.') + '</div>'; return; }
+    const A = periodo($('pq-a').value), B = periodo($('pq-b').value);
+    const filas = [['Pedidos (paquetes)', 'pedidos'], ['Piezas', 'piezas'], ['Normales (1 pieza)', 'normales'], ['Múltiples (más de 1 pieza)', 'multiples'], ['Escaneados con evidencia', 'escaneados'], ['Entregados en Tráfico', 'entregados']];
+    let h = '<div class="pq-scroll"><table class="pq"><thead><tr><th class="nom">Medida</th><th>A · ' + esc(A.nombre) + '</th><th>B · ' + esc(B.nombre) + '</th><th>Diferencia (A menos B)</th></tr></thead><tbody>';
+    filas.forEach(function (f) {
+      const a = A[f[1]], b = B[f[1]], dif = a - b, signo = dif > 0 ? '+' : '';
+      const pct = b ? ' (' + signo + (dif / b * 100).toFixed(1) + '%)' : '';
+      h += '<tr><td class="nom">' + f[0] + '</td>' + num(a) + num(b) + '<td class="' + (dif > 0 ? 'pq-mas' : dif < 0 ? 'pq-menos' : 'cero') + '">' + signo + fmt(dif) + pct + '</td></tr>';
+    });
+    $('pq-cmp').innerHTML = h + '</tbody></table></div><p class="nota">Se puede comparar lo que ya está cargado (' + esc(cargado()) + '). Para comparar algo más viejo, pon una fecha anterior en "Desde".</p>';
+  }
+  function cargado() {
+    const ok = Object.keys(meses).filter(function (k) { return meses[k].estado === 'ok'; }).sort();
+    if (!ok.length) return 'nada todavía';
+    return ok.length === 1 ? mesLargo(ok[0]) : 'de ' + mesLargo(ok[0]) + ' a ' + mesLargo(ok[ok.length - 1]);
+  }
+
+  /* ---------- BUSCAR ---------- */
+  const ESTADOS = ['Sin escanear', 'Escaneado · falta Tráfico', 'Entregado · sin evidencia', 'Entregado', 'Cancelado'];
+  function renderBuscar() {
+    const q = $('pq-q').value.trim().toLowerCase(), caja = $('pq-res');
+    const donde = '<p class="nota">Busca en lo que ya está cargado (' + esc(cargado()) + '). Para buscar más atrás, pon una fecha anterior en "Desde".</p>';
+    if (!q) { caja.innerHTML = '<div class="pq-vacio">Escribe un número de pedido o un canal.</div>' + donde; return; }
+    const res = P.concat(CANCELADOS).filter(function (p) { return p.pedido.toLowerCase().indexOf(q) !== -1 || nombreCanal(p.canal).toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) { return a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0; });
+    if (!res.length) { caja.innerHTML = '<div class="pq-vacio">Sin resultados para "' + esc(q) + '".</div>' + donde; return; }
+    let h = '<div class="pq-scroll"><table class="pq"><thead><tr><th class="nom">Fecha</th><th class="nom">Canal</th><th class="nom">Pedido</th><th>Piezas</th><th>Tipo</th><th>Estado</th></tr></thead><tbody>';
+    res.slice(0, 300).forEach(function (p) {
+      const e = p.estado >= 0 && p.estado <= 4 ? p.estado : 0;
+      h += '<tr><td class="nom">' + conDia(p.fecha) + '</td><td class="nom">' + esc(nombreCanal(p.canal)) + '</td><td class="nom">' + esc(p.pedido) + '</td><td>' + p.piezas + '</td><td>' + (p.piezas > 1 ? 'Múltiple' : 'Normal') + '</td><td><span class="pq-est e' + e + '">' + ESTADOS[e] + '</span></td></tr>';
+    });
+    caja.innerHTML = h + '</tbody></table></div><p class="nota">' + (res.length > 300 ? 'Mostrando 300 de ' + fmt(res.length) + '. Afina la búsqueda.' : fmt(res.length) + (res.length === 1 ? ' resultado.' : ' resultados.')) + '</p>' + donde;
+  }
+
+  /* ---------- Avisos de carga ---------- */
+  function renderEstado() {
+    const lista = mesesDelRango(), cargando = [], fallaron = [], canales = [];
+    lista.forEach(function (m) {
+      const x = meses[m];
+      if (!x || x.estado === 'cargando') cargando.push(mesLargo(m));
+      else if (x.estado === 'error') fallaron.push(m);
+      else Object.keys(x.errores || {}).forEach(function (ch) { canales.push(nombreCanal(ch) + ' en ' + mesLargo(m)); });
+    });
+    let h = '';
+    if (cargando.length) h += '<div class="carga">Cargando ' + esc(cargando.join(', ')) + '… (puede tardar unos segundos)</div>';
+    fallaron.forEach(function (m) { h += '<div class="mal">⚠ No se pudo cargar ' + esc(mesLargo(m)) + '.<button type="button" data-reintentar="' + m + '">Reintentar</button></div>'; });
+    if (canales.length) h += '<div class="mal">⚠ No se pudo leer: ' + esc(canales.join(', ')) + '. Los demás canales sí están.</div>';
+    $('pq-estado').innerHTML = h;
+  }
+
+  /* ---------- Controles ---------- */
+  function render() {
+    const r = rango();
+    $('pq-titulo').textContent = 'Paquetes · ' + (r.d === r.h ? conDia(r.d) : corta(r.d) + ' al ' + corta(r.h));
+    renderEstado();
+    if (vista === 'resumen') renderResumen();
+    if (vista === 'grafica') renderGrafica();
+    if (vista === 'comparar') renderComparar();
+    if (vista === 'buscar') renderBuscar();
+  }
+  function activar(cont, btn) { cont.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); }); }
+  function limites() {
+    ['pq-desde', 'pq-hasta'].forEach(function (id) { $(id).min = mesMinimo() + '-01'; $(id).max = HOY; });
+  }
+  function rangoInicial() {
+    const b = $('pq-rapidos').querySelector('button.active') || $('pq-rapidos').querySelector('[data-dias="6"]');
+    activar($('pq-rapidos'), b);
+    $('pq-desde').value = menosDias(HOY, +b.dataset.dias); $('pq-hasta').value = HOY;
+  }
+  function cambioDeRango() { tocado = true; asegurar(); render(); }
+
+  $('pq-rapidos').addEventListener('click', function (e) {
+    const b = e.target.closest('button'); if (!b) return;
+    activar(this, b); $('pq-desde').value = menosDias(HOY, +b.dataset.dias); $('pq-hasta').value = HOY; cambioDeRango();
+  });
+  ['pq-desde', 'pq-hasta'].forEach(function (id) {
+    $(id).addEventListener('change', function () {
+      const el = $(id);
+      if (el.value && el.value > HOY) el.value = HOY;
+      if (el.value && el.value < mesMinimo() + '-01') el.value = mesMinimo() + '-01';
+      activar($('pq-rapidos'), null); cambioDeRango();
+    });
+  });
+  $('pq-sub').addEventListener('click', function (e) {
+    const b = e.target.closest('button'); if (!b) return;
+    activar(this, b); vista = b.dataset.vista;
+    document.querySelectorAll('.pq-vista').forEach(function (v) { v.classList.toggle('active', v.id === 'pq-' + vista); });
+    render();
+  });
+  $('pq-verpor').addEventListener('click', function (e) { const b = e.target.closest('button'); if (!b) return; activar(this, b); verPor = b.dataset.v; renderGrafica(); });
+  $('pq-medida').addEventListener('click', function (e) { const b = e.target.closest('button'); if (!b) return; activar(this, b); medida = b.dataset.v; renderGrafica(); });
+  $('pq-a').addEventListener('change', renderComparar);
+  $('pq-b').addEventListener('change', renderComparar);
+  $('pq-q').addEventListener('input', renderBuscar);
+  $('pq-estado').addEventListener('click', function (e) {
+    const b = e.target.closest('button[data-reintentar]'); if (!b) return;
+    pedir(b.dataset.reintentar); render();
+  });
+  window.addEventListener('resize', function () { if (abierto && vista === 'grafica') renderGrafica(); });
+  setInterval(refrescarSiViejo, 60 * 1000);
+
+  return {
+    abrir: function () {
+      if (!abierto) { abierto = true; limites(); rangoInicial(); asegurar(); render(); }
+      else { refrescarSiViejo(); if (vista === 'grafica') renderGrafica(); }
+    }
+  };
+})();
 
 /* arranque: Envíos visible */
 cargarSemanaEnv_();

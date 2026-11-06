@@ -202,7 +202,6 @@
       margin-bottom: 12px;
       border-radius: 2px;
     }
-    .channel-temu   { background: var(--black); color: var(--white); }
     .channel-shein  { background: var(--white); color: var(--black); border: 1.5px solid var(--black); }
     .channel-tiktok { background: var(--black); color: var(--white); border: 1.5px dashed var(--white); }
     .channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
@@ -374,7 +373,6 @@
       -webkit-tap-highlight-color: transparent;
     }
     .channel-btn:active { opacity: .75; transform: scale(.98); }
-    .channel-btn.channel-temu   { background: var(--black); color: var(--white); }
     .channel-btn.channel-shein  { background: var(--white); color: var(--black); border: 1.5px solid var(--black); }
     .channel-btn.channel-tiktok { background: var(--black); color: var(--white); outline: 1.5px dashed rgba(255,255,255,.5); outline-offset: -4px; }
     .channel-btn.channel-ml     { background: var(--white); color: var(--black); border: 1.5px dotted var(--black); }
@@ -648,7 +646,6 @@
       <div class="divider"></div>
       <h1>Scanner</h1>
       <div class="channel-pills">
-        <span class="channel-badge channel-temu">Temu</span>
         <span class="channel-badge channel-shein">Shein</span>
         <span class="channel-badge channel-tiktok">TikTok</span>
         <span class="channel-badge channel-ml">ML</span>
@@ -687,7 +684,6 @@
     <p class="subtitle" id="channel-select-subtitle" style="font-size:14px; margin-bottom:28px; align-self:flex-start">
       Selecciona el canal
     </p>
-    <button class="channel-btn channel-temu"   onclick="selectChannel('temu')">Temu</button>
     <button class="channel-btn channel-shein"  onclick="selectChannel('shein')">SHEIN</button>
     <button class="channel-btn channel-tiktok" onclick="selectChannel('tiktok')">TikTok</button>
     <button class="channel-btn channel-ml"     onclick="selectChannel('ml')">Mercado Libre</button>
@@ -925,7 +921,6 @@
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyt2_OBXDiGStpeyTAkQGBAG_wWGI_GP24swuGLcAI1S9LnCWwEmhPHQul2CGsDw/exec';
 const CHANNEL_LABELS = {
-  temu:   ['TEMU',   'channel-temu'],
   shein:  ['SHEIN',  'channel-shein'],
   tiktok: ['TIKTOK', 'channel-tiktok'],
   ml:     ['ML',     'channel-ml'],
@@ -1049,7 +1044,7 @@ async function loadCounts() {
     );
     const data = await res.json();
     if (!data.counts) { el.textContent = ''; return; }
-    const order = ['temu', 'shein', 'tiktok', 'ml', 'amazon', 'walmart'];
+    const order = ['shein', 'tiktok', 'ml', 'amazon', 'walmart'];
     const parts = order
       .filter(ch => data.counts[ch] !== undefined)
       .map(ch => (CHANNEL_LABELS[ch] ? CHANNEL_LABELS[ch][0] : ch.toUpperCase()) + ' ' + data.counts[ch]);
@@ -1215,8 +1210,7 @@ async function startScanner() {
     // etiquetas, leídas con zxing). El 94% ("iMile") trae el mismo código de
     // 14 dígitos en QR y en Code128 — Elena puede apuntar a cualquiera de
     // los dos. Se deja también Code128 de respaldo, igual que ML.
-    // TEMU: se queda con la lista de siempre. No he visto sus etiquetas y
-    // no lo voy a romper por optimizar.
+    // DEVOLUCIÓN (cualquier canal): se queda con la lista completa de siempre.
     //   0=QR  3=Code39  5=Code128  6=DataMatrix  9=EAN-13
     //
     // 🚀 Combo (30-jul): SHEIN + TikTok al mismo tiempo. TikTok es solo-QR y
@@ -1288,10 +1282,10 @@ async function startScanner() {
     // TikTok. Por cada cuadro de cámara, la librería probaba el cuadro TAL
     // CUAL y además su versión "espejo" (volteada horizontalmente) — el
     // doble de intentos de decodificación por cuadro. Ninguna etiqueta física
-    // de ningún canal (Temu, SHEIN, TikTok, ML, Amazon) se imprime ni se pega
+    // de ningún canal (SHEIN, TikTok, ML, Amazon) se imprime ni se pega
     // volteada — no hay caso real donde el escaneo dependa de esa segunda
-    // pasada. Quitarla en los 5 canales es la misma ganancia que ya se veía
-    // en TikTok, ahora también en Amazon/ML/SHEIN/Temu.
+    // pasada. Quitarla en todos los canales es la misma ganancia que ya se veía
+    // en TikTok, ahora también en Amazon/ML/SHEIN.
     // 🔴 Corregido (11-ago): antes NUNCA se pedía una resolución de cámara —
     // solo se mandaba { facingMode: 'environment' }. Sin width/height, la
     // librería usa lo que sea que el navegador/celular decida por default,

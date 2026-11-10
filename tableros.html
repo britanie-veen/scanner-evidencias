@@ -154,6 +154,46 @@
   .pq-est.e4 { color: var(--muted); background: var(--surface); border-color: var(--border); }
   .pq-mas { color: var(--green); } .pq-menos { color: var(--red); }
   .aviso { background: #FFF7E6; border: 1px solid #F0D9A0; border-radius: 4px; padding: 12px 16px; font-size: 12px; font-weight: 300; color: var(--amber); margin-bottom: 16px; line-height: 1.5; }
+
+  /* ══ 🆕 (10-nov-2026) Franja de resumen + pestañas en grupos + pestaña Avance ══ */
+  .resumen { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .rc { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; min-width: 0; }
+  .rc .k { font-size: 11px; color: #767676; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+  .rc .v { font-size: 28px; font-weight: 900; margin-top: 4px; line-height: 1.15; overflow-wrap: anywhere; }
+  .rc .d { font-size: 12px; color: #767676; font-weight: 300; margin-top: 2px; }
+  .rc.rojo .v { color: #E03131; }
+  .nav-grupos { display: flex; gap: 26px; flex-wrap: wrap; margin-bottom: 22px; }
+  .nav-grupos .g { font-size: 10.5px; color: #767676; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
+  .nav-grupos .tabs { margin-bottom: 0; }
+  .nuevo { font-size: 9.5px; background: #FFD23F; color: var(--black); border-radius: 6px; padding: 1px 5px; margin-left: 5px; vertical-align: 2px; letter-spacing: 0; }
+  .av-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid var(--border); border-radius: 16px; padding: 10px 12px; margin-bottom: 16px; font-size: 13px; font-weight: 700; }
+  .av-filtros input { border: 1px solid var(--border); border-radius: 10px; padding: 7px 9px; font: inherit; font-weight: 300; }
+  .av-filtros .sep { flex: 1; }
+  .av-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .av-panel { border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  .av-panel h2 { font-size: 15px; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .av-panel h2 span { font-size: 12px; color: #767676; font-weight: 300; }
+  .av-scroll { overflow-x: auto; }
+  .av-tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .av-tabla th { text-align: left; color: #767676; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 10px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--surface); }
+  .av-tabla td { padding: 11px 14px; border-bottom: 1px solid #f1f1ed; vertical-align: middle; white-space: nowrap; }
+  .av-tabla tr.fila { cursor: pointer; }
+  .av-tabla tr.fila:hover td { background: #fbfbf7; }
+  .av-pb { height: 8px; background: #ECECE8; border-radius: 8px; overflow: hidden; min-width: 110px; }
+  .av-pb i { display: block; height: 100%; background: #17A34A; }
+  .av-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
+  .d-shein { background: #111; } .d-tiktok { background: #25f4ee; box-shadow: 2px 0 0 #fe2c55; } .d-ml { background: #ffe600; border: 1px solid #d4bf00; }
+  .d-amazon { background: #ff9900; } .d-walmart { background: #0071ce; }
+  .av-falta { color: #E03131; font-weight: 800; } .av-listo { color: #17A34A; font-weight: 800; }
+  .av-det td { background: #fcfcf9; padding: 0; white-space: normal; }
+  .av-mini { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .av-mini th { background: #fcfcf9; text-align: left; color: #767676; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; padding: 8px 14px; }
+  .av-mini td { padding: 7px 14px; border-top: 1px solid #f1f1ed; }
+  .av-mono { font-family: Consolas, monospace; font-size: 12.5px; }
+  .av-btn { border: 1px solid var(--border); background: #fff; border-radius: 10px; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .av-estado { padding: 22px; text-align: center; color: #767676; font-size: 13px; }
+  @media (max-width: 900px) { .resumen { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { #app { padding: 22px 16px 50px; } .rc .v { font-size: 22px; } }
 </style>
 </head>
 <body>
@@ -167,16 +207,41 @@
   </div>
   <p class="subtitle">Todo en un solo lugar: lo escaneado en Marketplace, en Tráfico y en Devoluciones, el comparativo Marketplace vs Tráfico para ver qué etiqueta no hizo match, y el control de paquetes por canal.</p>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="envios" onclick="setTab('envios')">📦 Marketplace</button>
-    <button class="tab" data-tab="trafico" onclick="setTab('trafico')">🚦 Tráfico</button>
-    <button class="tab" data-tab="devoluciones" onclick="setTab('devoluciones')">↩️ Devoluciones</button>
-    <button class="tab" data-tab="comparativo" onclick="setTab('comparativo')">🔀 Comparativo</button>
-    <button class="tab" data-tab="paquetes" onclick="setTab('paquetes')">🧾 Paquetes</button>
+  <!-- 🆕 (10-nov-2026): franja de resumen (igual en todas las pestañas) -->
+  <div class="resumen" id="resumen">
+    <div class="rc"><div class="k">Escaneadas hoy</div><div class="v" id="rs-hoy">—</div><div class="d" id="rs-hoy-d">etiquetas</div></div>
+    <div class="rc rojo"><div class="k">Atraso</div><div class="v" id="rs-atraso">—</div><div class="d" id="rs-atraso-d">etiquetas</div></div>
+    <div class="rc"><div class="k">Más vieja abierta</div><div class="v" id="rs-vieja" style="font-size:24px">—</div><div class="d" id="rs-vieja-d"></div></div>
+    <div class="rc"><div class="k">Remisiones</div><div class="v" id="rs-rem">—</div><div class="d" id="rs-rem-d"></div></div>
+  </div>
+
+  <div class="nav-grupos">
+    <div><div class="g">Operación</div><div class="tabs">
+      <button class="tab active" data-tab="avance" onclick="setTab('avance')">📋 Avance<span class="nuevo">NUEVO</span></button>
+      <button class="tab" data-tab="envios" onclick="setTab('envios')">📦 Marketplace</button>
+      <button class="tab" data-tab="trafico" onclick="setTab('trafico')">🚦 Tráfico</button>
+      <button class="tab" data-tab="devoluciones" onclick="setTab('devoluciones')">↩️ Devoluciones</button>
+    </div></div>
+    <div><div class="g">Reportes</div><div class="tabs">
+      <button class="tab" data-tab="comparativo" onclick="setTab('comparativo')">🔀 Comparativo</button>
+      <button class="tab" data-tab="paquetes" onclick="setTab('paquetes')">🧾 Paquetes</button>
+    </div></div>
+  </div>
+
+  <!-- 🆕 (10-nov-2026) AVANCE POR REMISIÓN -->
+  <div class="panel active" id="panel-avance">
+    <div class="av-filtros">📅 Del <input type="date" id="av-desde"> al <input type="date" id="av-hasta">
+      <div class="sep"></div><div class="av-chips" id="av-chips"></div></div>
+    <div class="av-panel">
+      <h2>Remisiones <span>Toca una para ver qué etiquetas le faltan</span></h2>
+      <div class="av-scroll"><table class="av-tabla"><thead><tr><th>Remisión</th><th>Canal</th><th>Fecha</th><th>Avance</th><th>Escaneadas</th><th>Faltan</th><th>Piezas que faltan</th></tr></thead>
+        <tbody id="av-body"><tr><td colspan="7" class="av-estado">Cargando…</td></tr></tbody></table></div>
+    </div>
+    <p class="nota"><b>Escaneada</b> = ya tiene foto (estado Listo). Las canceladas no cuentan. Una etiqueta con varios SKU cuenta una vez. <b>N°</b> = lugar de la etiqueta dentro de su remisión, en el orden de la hoja de Ventas. La fecha es la de la venta. Se actualiza sola cada 3 minutos.</p>
   </div>
 
   <!-- ENVÍOS -->
-  <div class="panel active" id="panel-envios">
+  <div class="panel" id="panel-envios">
     <div class="tablero">
       <div class="tablero-head">
         <button class="nav-btn" id="env-prev" type="button">&#9664;</button>
@@ -308,6 +373,7 @@ function setTab(t) {
   if (t === 'comparativo' && !cmpCargado) { cmpCargado = true; cargarSemanaCmp_(); }
   if (t === 'devoluciones' && !devCargado) { devCargado = true; cargarSemanaDev_(); }
   if (t === 'paquetes') Paquetes.abrir();
+  if (t === 'envios' && !envCargado) { envCargado = true; cargarSemanaEnv_(); }   // 🆕 (10-nov)
 }
 
 /* ---------- Helpers de semana (compartidos Envíos/Tráfico) ---------- */
@@ -1010,8 +1076,101 @@ const Paquetes = (function () {
   };
 })();
 
-/* arranque: Envíos visible */
-cargarSemanaEnv_();
+/* ══ 🆕 (10-nov-2026) AVANCE POR REMISIÓN + franja de resumen ══════════
+   Lee ?action=avance (solo lectura). La franja se llena con lo mismo. */
+let envCargado = false;
+const Avance = (function () {
+  const NOM = { tiktok: 'TikTok', shein: 'SHEIN', ml: 'Mercado Libre', amazon: 'Amazon', walmart: 'Walmart' };
+  const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  let datos = null, canal = 'todos', pedidoEn = 0;
+  const abiertos = new Set();
+  const $ = function (id) { return document.getElementById(id); };
+  const fmt = function (n) { return Number(n || 0).toLocaleString('es-MX'); };
+  const esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  // fecha con el día primero: "lunes 16 de noviembre" (regla de Britanie, 10-nov)
+  function fdia(iso) { if (!iso) return '—'; const d = new Date(iso + 'T12:00:00'); return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MES[d.getMonth()]; }
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function cargar() {
+    pedidoEn = Date.now();
+    const url = APPS_SCRIPT_URL + '?action=avance&desde=' + $('av-desde').value + '&hasta=' + $('av-hasta').value;
+    fetch(url, { redirect: 'follow' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.remisiones) throw new Error((d && d.error) || 'sin datos');
+      datos = d; pintar();
+    }).catch(function (e) {
+      if (!datos) $('av-body').innerHTML = '<tr><td colspan="7" class="av-estado">No se pudo cargar el avance (' + esc(e.message) + '). <button class="av-btn" onclick="Avance.recargar()">Reintentar</button></td></tr>';
+    });
+  }
+  function chips() {
+    $('av-chips').innerHTML = ['todos', 'tiktok', 'shein', 'ml', 'amazon', 'walmart'].map(function (k) {
+      return '<button class="chip-canal' + (k === canal ? ' active' : '') + '" type="button" data-c="' + k + '">' + (k === 'todos' ? 'Todos' : '<span class="av-dot d-' + k + '"></span>' + NOM[k]) + '</button>';
+    }).join('');
+  }
+  function pintar() {
+    chips();
+    if (!datos) return;
+    const rs = datos.remisiones.filter(function (r) { return canal === 'todos' || r.canal === canal; });
+    const ab = rs.filter(function (r) { return r.faltan.length; });
+    const falt = ab.reduce(function (a, r) { return a + r.faltan.length; }, 0);
+    const pzf = ab.reduce(function (a, r) { return a + r.piezas - r.pz_esc; }, 0);
+    const vieja = ab.slice().sort(function (a, b) { return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.rem < b.rem ? -1 : 1); })[0];
+    const H = datos.escaneadasHoy || {};
+    const hoy = canal === 'todos' ? Object.keys(H).reduce(function (a, k) { return a + Number(H[k] || 0); }, 0) : Number(H[canal] || 0);
+    $('rs-hoy').textContent = fmt(hoy);
+    $('rs-hoy-d').textContent = 'etiquetas' + (canal === 'todos' ? '' : ' de ' + NOM[canal]);
+    $('rs-atraso').textContent = fmt(falt);
+    $('rs-atraso-d').textContent = 'etiquetas · ' + fmt(pzf) + ' piezas';
+    $('rs-vieja').textContent = vieja ? vieja.rem : '—';
+    $('rs-vieja-d').textContent = vieja ? NOM[vieja.canal] + ' · ' + fdia(vieja.fecha) + ' · faltan ' + fmt(vieja.faltan.length) : 'sin atraso';
+    $('rs-rem').innerHTML = ab.length + '<span style="font-size:14px;color:#767676;font-weight:300"> abiertas</span>';
+    $('rs-rem-d').textContent = (rs.length - ab.length) + ' completas en el periodo';
+    const filas = rs.slice().sort(function (a, b) {
+      return (b.faltan.length > 0) - (a.faltan.length > 0) || (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0) || (a.rem < b.rem ? -1 : 1);
+    });
+    if (!filas.length) { $('av-body').innerHTML = '<tr><td colspan="7" class="av-estado">No hay remisiones en ese periodo.</td></tr>'; return; }
+    $('av-body').innerHTML = filas.map(function (r) {
+      const p = r.total ? Math.round(r.esc / r.total * 100) : 0, k = r.canal + '|' + r.rem;
+      let h = '<tr class="fila" data-k="' + esc(k) + '"><td><b>' + esc(r.rem) + '</b></td><td><span class="av-dot d-' + r.canal + '"></span>' + NOM[r.canal] + '</td><td>' + fdia(r.fecha) + '</td>' +
+        '<td><div class="av-pb"><i style="width:' + p + '%"></i></div></td><td>' + fmt(r.esc) + ' / ' + fmt(r.total) + ' · ' + p + '%</td>' +
+        '<td class="' + (r.faltan.length ? 'av-falta' : 'av-listo') + '">' + (r.faltan.length ? fmt(r.faltan.length) : '✔ completa') + '</td><td>' + (r.faltan.length ? fmt(r.piezas - r.pz_esc) : '') + '</td></tr>';
+      if (abiertos.has(k) && r.faltan.length) h += '<tr class="av-det"><td colspan="7">' + listaFaltan(r, true) + '</td></tr>';
+      return h;
+    }).join('');
+  }
+  function listaFaltan(r, conBoton) {
+    const f = r.faltan.map(function (l) {
+      return '<tr><td>' + esc(l.n) + '</td><td class="av-mono">' + esc(l.guia) + '</td><td class="av-mono">' + esc(l.pedido) + '</td><td>' +
+        l.items.map(function (i) { return esc(i[0]) + ' × ' + i[1]; }).join('<br>') + '</td></tr>';
+    }).join('');
+    return (conBoton ? '<div style="padding:10px 14px 0;text-align:right"><button class="av-btn" data-imp="' + esc(r.canal + '|' + r.rem) + '">🖨️ Imprimir lista</button></div>' : '') +
+      '<table class="av-mini"><thead><tr><th>N°</th><th>Guía</th><th>Pedido</th><th>SKU × piezas</th></tr></thead><tbody>' + f + '</tbody></table>';
+  }
+  function imprimir(k) {
+    const r = datos.remisiones.filter(function (x) { return x.canal + '|' + x.rem === k; })[0]; if (!r) return;
+    const w = window.open('', '_blank'); if (!w) return;
+    w.document.write('<!doctype html><meta charset="utf-8"><title>Faltan · ' + esc(r.rem) + '</title><style>body{font-family:Montserrat,Arial,sans-serif;padding:20px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}h2{margin:0 0 4px}</style>' +
+      '<h2>Remisión ' + esc(r.rem) + ' · ' + NOM[r.canal] + '</h2><p>' + fdia(r.fecha) + ' · faltan ' + r.faltan.length + ' de ' + r.total + ' etiquetas</p>' + listaFaltan(r, false) + '<script>print()<\/script>');
+    w.document.close();
+  }
+  function iniciar() {
+    const h = new Date(); h.setHours(12, 0, 0, 0);
+    const d = new Date(h); d.setDate(d.getDate() - 13);
+    $('av-desde').value = iso(d); $('av-hasta').value = iso(h);
+    $('av-desde').addEventListener('change', cargar); $('av-hasta').addEventListener('change', cargar);
+    $('av-chips').addEventListener('click', function (e) { const b = e.target.closest('button[data-c]'); if (!b) return; canal = b.dataset.c; pintar(); });
+    $('av-body').addEventListener('click', function (e) {
+      const bi = e.target.closest('button[data-imp]'); if (bi) { imprimir(bi.dataset.imp); return; }
+      const tr = e.target.closest('tr.fila'); if (!tr) return;
+      const k = tr.dataset.k; abiertos.has(k) ? abiertos.delete(k) : abiertos.add(k); pintar();
+    });
+    chips(); cargar();
+    setInterval(function () { if (Date.now() - pedidoEn > 3 * 60 * 1000) cargar(); }, 60 * 1000);
+  }
+  return { iniciar: iniciar, recargar: cargar };
+})();
+
+/* arranque: Avance visible (Marketplace se carga al abrir su pestaña) */
+Avance.iniciar();
 </script>
 </body>
 </html>

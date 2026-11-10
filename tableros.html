@@ -192,6 +192,36 @@
   .av-mono { font-family: Consolas, monospace; font-size: 12.5px; }
   .av-btn { border: 1px solid var(--border); background: #fff; border-radius: 10px; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
   .av-estado { padding: 22px; text-align: center; color: #767676; font-size: 13px; }
+
+  /* ══ 🆕 (10-nov-2026) Paso 3: todas las pestañas con el mismo estilo que Avance ══
+     Tarjetas redondeadas, encabezados claros, letra más legible (nada en peso 200).
+     Solo apariencia: ningún dato ni botón cambia. */
+  .subtitle { font-weight: 400; color: #767676; }
+  .back-link { border-radius: 12px; }
+  .tab { border-radius: 12px; }
+  .tablero { border-radius: 18px; }
+  .tablero-head { background: #fff; color: var(--black); border-bottom: 1px solid var(--border); padding: 12px 16px; }
+  .tablero-titulo { font-size: 15px; letter-spacing: .06em; }
+  .nav-btn { background: var(--surface); color: var(--black); border: 1px solid var(--border); border-radius: 12px; }
+  .nav-btn:hover:not(:disabled) { border-color: var(--black); }
+  table.cal tbody td { font-size: 19px; }
+  table.cal td.cero, table.pq td.cero { color: #B5B5B5; font-weight: 400; }
+  table.cal thead th, table.comp thead th, table.pq thead th { color: #767676; font-weight: 700; }
+  table.cal tfoot td, table.comp tfoot td, table.pq tfoot td { background: #F5F5F2; color: var(--black); border-top: 2px solid var(--black); }
+  tfoot .pq-mini.falta { color: #E03131; }
+  tfoot .pq-mini.ok { color: #17A34A; }
+  .nota { font-size: 12px; font-weight: 400; color: #767676; line-height: 1.6; letter-spacing: 0; }
+  .falta-row { font-weight: 400; }
+  .detalle-inner { border-radius: 0 0 14px 14px; }
+  .btn-sin-escaner, .btn-todo-dia, .pq-estado button { border-radius: 10px; }
+  .pq-controles { padding: 14px 16px; }
+  #panel-paquetes input[type=date], #panel-paquetes input[type=text], #panel-paquetes select { border-radius: 10px; font-weight: 400; }
+  .pq-kpi { border-radius: 16px; }
+  .pq-kpi .k, .pq-label { color: #767676; }
+  .pq-scroll, .pq-graf { border-radius: 14px; }
+  .pq-vacio, .pq-estado .carga { font-weight: 400; }
+  .pq-tip { border-radius: 10px; font-weight: 400; }
+  .aviso { border-radius: 14px; font-weight: 400; }
   @media (max-width: 900px) { .resumen { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 520px) { #app { padding: 22px 16px 50px; } .rc .v { font-size: 22px; } }
 </style>

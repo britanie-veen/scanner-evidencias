@@ -184,6 +184,7 @@
   .av-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
   .d-shein { background: #111; } .d-tiktok { background: #25f4ee; box-shadow: 2px 0 0 #fe2c55; } .d-ml { background: #ffe600; border: 1px solid #d4bf00; }
   .d-amazon { background: #ff9900; } .d-walmart { background: #0071ce; }
+  .av-limite { color: #E03131; font-weight: 700; }
   .av-falta { color: #E03131; font-weight: 800; } .av-listo { color: #17A34A; font-weight: 800; }
   .av-det td { background: #fcfcf9; padding: 0; white-space: normal; }
   .av-mini { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -248,12 +249,12 @@
   <div class="nav-grupos">
     <div><div class="g">Operación</div><div class="tabs">
       <button class="tab active" data-tab="avance" onclick="setTab('avance')">📋 Avance<span class="nuevo">NUEVO</span></button>
-      <button class="tab" data-tab="envios" onclick="setTab('envios')">📦 Marketplace</button>
+      <!-- (10-nov): botón de Marketplace quitado a pedido de Britanie (ya está Avance). El panel y su código se quedan por si se regresa. -->
       <button class="tab" data-tab="trafico" onclick="setTab('trafico')">🚦 Tráfico</button>
       <button class="tab" data-tab="devoluciones" onclick="setTab('devoluciones')">↩️ Devoluciones</button>
     </div></div>
     <div><div class="g">Reportes</div><div class="tabs">
-      <button class="tab" data-tab="comparativo" onclick="setTab('comparativo')">🔀 Comparativo</button>
+      <!-- (10-nov): botón de Comparativo quitado a pedido de Britanie (ya está Paquetes). El panel y su código se quedan por si se regresa. -->
       <button class="tab" data-tab="paquetes" onclick="setTab('paquetes')">🧾 Paquetes</button>
     </div></div>
   </div>
@@ -264,10 +265,10 @@
       <div class="sep"></div><div class="av-chips" id="av-chips"></div></div>
     <div class="av-panel">
       <h2>Remisiones <span>Toca una para ver qué etiquetas le faltan</span></h2>
-      <div class="av-scroll"><table class="av-tabla"><thead><tr><th>Remisión</th><th>Canal</th><th>Fecha</th><th>Avance</th><th>Escaneadas</th><th>Faltan</th><th>Piezas que faltan</th></tr></thead>
-        <tbody id="av-body"><tr><td colspan="7" class="av-estado">Cargando…</td></tr></tbody></table></div>
+      <div class="av-scroll"><table class="av-tabla"><thead><tr><th>Remisión</th><th>Canal</th><th>Fecha de venta</th><th>Fecha límite</th><th>Avance</th><th>Escaneadas</th><th>Faltan</th><th>Piezas que faltan</th></tr></thead>
+        <tbody id="av-body"><tr><td colspan="8" class="av-estado">Cargando…</td></tr></tbody></table></div>
     </div>
-    <p class="nota"><b>Escaneada</b> = ya tiene foto (estado Listo). Las canceladas no cuentan. Una etiqueta con varios SKU cuenta una vez. <b>N°</b> = lugar de la etiqueta dentro de su remisión, en el orden de la hoja de Ventas. La fecha es la de la venta. Se actualiza sola cada 3 minutos.</p>
+    <p class="nota"><b>Escaneada</b> = ya tiene foto (estado Listo). Las canceladas no cuentan. Una etiqueta con varios SKU cuenta una vez. <b>N°</b> = lugar de la etiqueta dentro de su remisión, en el orden de la hoja de Ventas. <b>Fecha límite</b> = 3 días hábiles (lunes a viernes) después de la fecha de venta. Se actualiza sola cada 3 minutos.</p>
   </div>
 
   <!-- ENVÍOS -->
@@ -345,6 +346,7 @@
         <button class="pq-subtab active" data-vista="resumen" type="button">Resumen</button>
         <button class="pq-subtab" data-vista="grafica" type="button">Gráfica</button>
         <button class="pq-subtab" data-vista="comparar" type="button">Comparar</button>
+        <button class="pq-subtab" data-vista="pendientes" type="button">Pendientes</button>
         <button class="pq-subtab" data-vista="buscar" type="button">Buscar</button>
       </div>
 
@@ -376,6 +378,15 @@
             <div class="pq-grupo"><label class="pq-label" for="pq-b">Periodo B</label><select id="pq-b"></select></div>
           </div>
           <div id="pq-cmp"></div>
+        </div>
+
+        <!-- 🆕 (10-nov-2026): cuáles pedidos faltan, por estado y canal -->
+        <div class="pq-vista" id="pq-pendientes">
+          <div class="pq-fila">
+            <div class="pq-grupo"><span class="pq-label">Qué ver</span><div class="pq-chips" id="pq-pend-tipo"></div></div>
+            <div class="pq-grupo"><span class="pq-label">Canal</span><div class="pq-chips" id="pq-pend-canal"></div></div>
+          </div>
+          <div id="pq-pend"></div>
         </div>
 
         <div class="pq-vista" id="pq-buscar">
@@ -1031,6 +1042,55 @@ const Paquetes = (function () {
     caja.innerHTML = h + '</tbody></table></div><p class="nota">' + (res.length > 300 ? 'Mostrando 300 de ' + fmt(res.length) + '. Afina la búsqueda.' : fmt(res.length) + (res.length === 1 ? ' resultado.' : ' resultados.')) + '</p>' + donde;
   }
 
+
+  /* ---------- 🆕 (10-nov-2026) Pendientes: cuáles pedidos faltan ----------
+     estado 0 = sin escanear · 1 = escaneado, falta Tráfico · 2 = entregado sin evidencia (ver ESTADOS) */
+  let pendTipo = 0, pendCanal = 'todos';
+  const PEND_TIPOS = [[0, '🔴 Sin escanear'], [1, '🟠 Falta Tráfico'], [2, '🟠 Entregado sin evidencia']];
+  function listaPendientes() {
+    return enRango(P).filter(function (p) { return p.estado === pendTipo && (pendCanal === 'todos' || p.canal === pendCanal); })
+      .sort(function (a, b) { return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.pedido < b.pedido ? -1 : 1); });
+  }
+  function renderPendientes() {
+    const base = enRango(P);
+    $('pq-pend-tipo').innerHTML = PEND_TIPOS.map(function (t) {
+      const n = base.filter(function (p) { return p.estado === t[0] && (pendCanal === 'todos' || p.canal === pendCanal); }).length;
+      return '<button class="chip-canal' + (t[0] === pendTipo ? ' active' : '') + '" type="button" data-t="' + t[0] + '">' + t[1] + ' · ' + fmt(n) + '</button>';
+    }).join('');
+    $('pq-pend-canal').innerHTML = ['todos'].concat(CANALES).map(function (c) {
+      return '<button class="chip-canal' + (c === pendCanal ? ' active' : '') + '" type="button" data-c="' + c + '">' + (c === 'todos' ? 'Todos' : esc(nombreCanal(c))) + '</button>';
+    }).join('');
+    const caja = $('pq-pend');
+    if (!base.length) { caja.innerHTML = '<div class="pq-vacio">' + (cargandoRango() ? 'Cargando…' : 'No hay pedidos en este rango.') + '</div>'; return; }
+    const res = listaPendientes();
+    if (!res.length) { caja.innerHTML = '<div class="pq-vacio">✔ Nada pendiente con este filtro.</div>'; return; }
+    const pz = res.reduce(function (a, p) { return a + p.piezas; }, 0);
+    let h = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
+      '<b style="font-size:15px">' + fmt(res.length) + ' pedidos · ' + fmt(pz) + ' piezas</b>' +
+      '<button class="chip-canal" type="button" id="pq-pend-imp">🖨️ Imprimir lista</button></div>';
+    h += tablaPendientes(res.slice(0, 500));
+    caja.innerHTML = h + (res.length > 500 ? '<p class="nota">Mostrando los 500 más viejos de ' + fmt(res.length) + '. Elige un canal o acorta las fechas para ver el resto (al imprimir salen todos).</p>' : '');
+  }
+  function tablaPendientes(lista) {
+    let h = '<div class="pq-scroll"><table class="pq"><thead><tr><th class="nom">Fecha</th><th class="nom">Canal</th><th class="nom">Pedido</th><th>Piezas</th><th>Estado</th></tr></thead><tbody>';
+    lista.forEach(function (p) {
+      h += '<tr><td class="nom">' + conDia(p.fecha) + '</td><td class="nom">' + esc(nombreCanal(p.canal)) + '</td><td class="nom">' + esc(p.pedido) + '</td><td>' + p.piezas +
+        '</td><td><span class="pq-est e' + p.estado + '">' + ESTADOS[p.estado] + '</span></td></tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+  function imprimirPendientes() {
+    const res = listaPendientes(), r = rango(); if (!res.length) return;
+    const w = window.open('', '_blank'); if (!w) return;
+    const titulo = ESTADOS[pendTipo] + ' · ' + (pendCanal === 'todos' ? 'todos los canales' : nombreCanal(pendCanal)) + ' · ' + conDia(r.d) + ' al ' + conDia(r.h);
+    w.document.write('<!doctype html><meta charset="utf-8"><title>Pendientes</title><style>body{font-family:Montserrat,Arial,sans-serif;padding:20px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}.pq-est{font-weight:700}</style>' +
+      '<h2 style="margin:0 0 4px">' + esc(titulo) + '</h2><p>' + fmt(res.length) + ' pedidos</p>' + tablaPendientes(res) + '<script>print()<\/script>');
+    w.document.close();
+  }
+  $('pq-pend-tipo').addEventListener('click', function (e) { const b = e.target.closest('button[data-t]'); if (!b) return; pendTipo = +b.dataset.t; renderPendientes(); });
+  $('pq-pend-canal').addEventListener('click', function (e) { const b = e.target.closest('button[data-c]'); if (!b) return; pendCanal = b.dataset.c; renderPendientes(); });
+  $('pq-pend').addEventListener('click', function (e) { if (e.target.closest('#pq-pend-imp')) imprimirPendientes(); });
+
   /* ---------- Avisos de carga ---------- */
   function renderEstado() {
     const lista = mesesDelRango(), cargando = [], fallaron = [], canales = [];
@@ -1056,6 +1116,7 @@ const Paquetes = (function () {
     if (vista === 'grafica') renderGrafica();
     if (vista === 'comparar') renderComparar();
     if (vista === 'buscar') renderBuscar();
+    if (vista === 'pendientes') renderPendientes();
   }
   function activar(cont, btn) { cont.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); }); }
   function limites() {
@@ -1120,6 +1181,8 @@ const Avance = (function () {
   const esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   // fecha con el día primero: "lunes 16 de noviembre" (regla de Britanie, 10-nov)
   function fdia(iso) { if (!iso) return '—'; const d = new Date(iso + 'T12:00:00'); return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MES[d.getMonth()]; }
+  // 🆕 (10-nov): fecha límite = 3 días hábiles (lunes a viernes) después de la fecha de venta. Regla de Britanie.
+  function limite(f) { if (!f) return ''; const d = new Date(f + 'T12:00:00'); let n = 0; while (n < 3) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; } return iso(d); }
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function cargar() {
     pedidoEn = Date.now();
@@ -1128,7 +1191,7 @@ const Avance = (function () {
       if (!d || !d.remisiones) throw new Error((d && d.error) || 'sin datos');
       datos = d; pintar();
     }).catch(function (e) {
-      if (!datos) $('av-body').innerHTML = '<tr><td colspan="7" class="av-estado">No se pudo cargar el avance (' + esc(e.message) + '). <button class="av-btn" onclick="Avance.recargar()">Reintentar</button></td></tr>';
+      if (!datos) $('av-body').innerHTML = '<tr><td colspan="8" class="av-estado">No se pudo cargar el avance (' + esc(e.message) + '). <button class="av-btn" onclick="Avance.recargar()">Reintentar</button></td></tr>';
     });
   }
   function chips() {
@@ -1157,13 +1220,13 @@ const Avance = (function () {
     const filas = rs.slice().sort(function (a, b) {
       return (b.faltan.length > 0) - (a.faltan.length > 0) || (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0) || (a.rem < b.rem ? -1 : 1);
     });
-    if (!filas.length) { $('av-body').innerHTML = '<tr><td colspan="7" class="av-estado">No hay remisiones en ese periodo.</td></tr>'; return; }
+    if (!filas.length) { $('av-body').innerHTML = '<tr><td colspan="8" class="av-estado">No hay remisiones en ese periodo.</td></tr>'; return; }
     $('av-body').innerHTML = filas.map(function (r) {
       const p = r.total ? Math.round(r.esc / r.total * 100) : 0, k = r.canal + '|' + r.rem;
-      let h = '<tr class="fila" data-k="' + esc(k) + '"><td><b>' + esc(r.rem) + '</b></td><td><span class="av-dot d-' + r.canal + '"></span>' + NOM[r.canal] + '</td><td>' + fdia(r.fecha) + '</td>' +
+      let h = '<tr class="fila" data-k="' + esc(k) + '"><td><b>' + esc(r.rem) + '</b></td><td><span class="av-dot d-' + r.canal + '"></span>' + NOM[r.canal] + '</td><td>' + fdia(r.fecha) + '</td><td class="av-limite">' + fdia(limite(r.fecha)) + '</td>' +
         '<td><div class="av-pb"><i style="width:' + p + '%"></i></div></td><td>' + fmt(r.esc) + ' / ' + fmt(r.total) + ' · ' + p + '%</td>' +
         '<td class="' + (r.faltan.length ? 'av-falta' : 'av-listo') + '">' + (r.faltan.length ? fmt(r.faltan.length) : '✔ completa') + '</td><td>' + (r.faltan.length ? fmt(r.piezas - r.pz_esc) : '') + '</td></tr>';
-      if (abiertos.has(k) && r.faltan.length) h += '<tr class="av-det"><td colspan="7">' + listaFaltan(r, true) + '</td></tr>';
+      if (abiertos.has(k) && r.faltan.length) h += '<tr class="av-det"><td colspan="8">' + listaFaltan(r, true) + '</td></tr>';
       return h;
     }).join('');
   }
@@ -1179,7 +1242,7 @@ const Avance = (function () {
     const r = datos.remisiones.filter(function (x) { return x.canal + '|' + x.rem === k; })[0]; if (!r) return;
     const w = window.open('', '_blank'); if (!w) return;
     w.document.write('<!doctype html><meta charset="utf-8"><title>Faltan · ' + esc(r.rem) + '</title><style>body{font-family:Montserrat,Arial,sans-serif;padding:20px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}h2{margin:0 0 4px}</style>' +
-      '<h2>Remisión ' + esc(r.rem) + ' · ' + NOM[r.canal] + '</h2><p>' + fdia(r.fecha) + ' · faltan ' + r.faltan.length + ' de ' + r.total + ' etiquetas</p>' + listaFaltan(r, false) + '<script>print()<\/script>');
+      '<h2>Remisión ' + esc(r.rem) + ' · ' + NOM[r.canal] + '</h2><p>Venta: ' + fdia(r.fecha) + ' · <b style="color:#E03131">Fecha límite: ' + fdia(limite(r.fecha)) + '</b> · faltan ' + r.faltan.length + ' de ' + r.total + ' etiquetas</p>' + listaFaltan(r, false) + '<script>print()<\/script>');
     w.document.close();
   }
   function iniciar() {

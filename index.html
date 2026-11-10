@@ -633,6 +633,59 @@
       color: #B3261E;
       cursor: pointer;
     }
+
+    /* ══ 🆕 Rediseño celular (10-nov-2026) ═════════════════════
+       Nada se sale de la pantalla: sin letras gigantes, tarjetas redondeadas,
+       una sola acción principal por pantalla. Solo estilos: la lógica es la misma. */
+    :root { --ink:#0D0D0D; --soft:#F5F5F2; --line:#E7E7E3; --am:#FFD23F; --ok:#17A34A; }
+    html, body { overflow-x: hidden; }
+    .screen { padding: 18px 16px 28px; }
+    .r-bar { width:100%; display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .r-logo { display:flex; align-items:center; gap:10px; }
+    .r-m { width:38px; height:38px; border-radius:11px; background:var(--ink); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:21px; }
+    .r-logo b { font-size:16px; font-weight:900; letter-spacing:.03em; display:block; }
+    .r-logo small { display:block; font-size:10px; color:#7a7a7a; letter-spacing:.14em; text-transform:uppercase; font-weight:600; }
+    .r-ico { width:42px; height:42px; border-radius:12px; border:1px solid var(--line); background:#fff; font-size:18px; cursor:pointer; }
+    .r-hoy { width:100%; background:var(--soft); border-radius:18px; padding:14px 16px; margin-bottom:18px; text-align:center; }
+    .r-hoy-num b { display:block; font-size:34px; font-weight:900; line-height:1.1; }
+    .r-hoy-num span { font-size:11px; color:#7a7a7a; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+    .r-hoy .count-summary { margin:8px 0 0; padding:0; border:none; background:none; font-size:11.5px; color:#555; font-weight:600; letter-spacing:.02em; text-transform:none; line-height:1.5; }
+    .r-hoy .count-summary:empty { display:none; }
+    .r-lbl { width:100%; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a7a; font-weight:700; margin:0 0 10px 4px; }
+    .r-modos { width:100%; display:flex; flex-direction:column; gap:10px; }
+    .r-modos .mode-btn { width:100%; flex:none; display:flex; align-items:center; gap:14px; text-align:left; border:1.5px solid var(--line); border-radius:18px; padding:14px 16px; background:#fff; color:var(--ink); font-family:'Montserrat',sans-serif; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; }
+    .r-modos .mode-btn b { display:block; font-size:15px; font-weight:800; }
+    .r-modos .mode-btn small { display:block; font-size:12px; color:#7a7a7a; font-weight:500; margin-top:2px; }
+    .r-e { flex:0 0 44px; width:44px; height:44px; border-radius:14px; background:var(--soft); display:flex; align-items:center; justify-content:center; font-size:21px; }
+    .r-modos .mode-btn.active { background:var(--ink); border-color:var(--ink); color:#fff; }
+    .r-modos .mode-btn.active small { color:#bdbdbd; }
+    .r-modos .mode-btn.active .r-e { background:#262626; }
+    #screen-home .spacer { flex:1; min-height:18px; }
+    .btn { border-radius:16px; }
+    .r-cta { padding:18px; font-size:15px; letter-spacing:.08em; margin-bottom:10px; }
+    .r-link { padding:14px; font-size:12.5px; }
+    .screen-header { margin-bottom:14px; padding-bottom:12px; gap:10px; }
+    .screen-header h2 { font-size:19px; text-align:left; font-weight:900; color:var(--ink); letter-spacing:.02em; }
+    #channel-select-subtitle { text-align:left; width:100%; }
+    .back-btn { width:40px; height:40px; border-radius:12px; border:1px solid var(--line); padding:0; flex:0 0 40px; }
+    .r-canales { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .r-canales .channel-btn { width:100%; margin:0; min-height:96px; padding:14px; border-radius:18px; border:1.5px solid var(--line); outline:none; background:#fff; color:var(--ink); display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between; text-align:left; text-transform:none; letter-spacing:0; font-family:'Montserrat',sans-serif; }
+    .r-canales .channel-btn b { display:block; font-size:15.5px; font-weight:800; }
+    .r-canales .channel-btn small { display:block; font-size:11.5px; color:#7a7a7a; font-weight:600; margin-top:2px; letter-spacing:0; text-transform:none; }
+    .r-canales .channel-btn.channel-combo { border-color:var(--ink); }
+    .r-canales .channel-btn.channel-combo .combo-sub { display:block; opacity:1; }
+    .r-dot { display:inline-block; width:12px; height:12px; border-radius:50%; }
+    .r-dots { display:flex; gap:6px; }
+    .r-dot.d-shein { background:#111; } .r-dot.d-tiktok { background:#25f4ee; box-shadow:3px 0 0 #fe2c55; }
+    .r-dot.d-ml { background:#ffe600; border:1px solid #d4bf00; } .r-dot.d-amazon { background:#ff9900; } .r-dot.d-walmart { background:#0071ce; }
+    .r-pie { color:#7a7a7a; font-size:12px; text-align:center; margin-top:16px; }
+    #reader { max-width:100%; border-radius:20px; border:none; }
+    .scan-hint { font-size:13px; }
+    .session-count, .remision-progress, .quick-check-toast { border-radius:14px; }
+    #screen-success .hero { gap:12px; }
+    #screen-success .state-icon { width:76px; height:76px; background:var(--ok); }
+    #screen-success .subtitle { font-size:14px; }
+    #success-scan-btn { background:var(--am); color:var(--ink); }
   </style>
 </head>
 <body>
@@ -640,39 +693,25 @@
 
   <!-- ── HOME ──────────────────────────────────────────────── -->
   <div id="screen-home" class="screen active">
-    <div class="hero">
-      <div class="logo-mark">%</div>
-      <div class="brand">CeroCero · Almacén</div>
-      <div class="divider"></div>
-      <h1>Scanner</h1>
-      <div class="channel-pills">
-        <span class="channel-badge channel-shein">Shein</span>
-        <span class="channel-badge channel-tiktok">TikTok</span>
-        <span class="channel-badge channel-ml">ML</span>
-        <span class="channel-badge channel-amazon">Amazon</span>
-        <span class="channel-badge channel-walmart">Walmart</span>
-      </div>
-      <p class="subtitle">Escanea la guía y registra<br>la evidencia en un paso</p>
+    <!-- 🆕 (10-nov): rediseño celular. Mismas funciones (setMode, startFlow,
+         loadCounts); ids btn-envio/btn-trafico/btn-devolucion intactos. -->
+    <div class="r-bar">
+      <div class="r-logo"><div class="r-m">%</div><div><b>SCANNER</b><small>CeroCero · Almacén</small></div></div>
+      <button class="r-ico" onclick="window.location.href = 'tableros.html'" title="Tableros del Scanner">📊</button>
     </div>
-    <!-- Toggle Marketplace / Tráfico / Devoluciones (19-oct: pidió Bri).
-         Marketplace = el modo "envío" de siempre (ids intactos para setMode);
-         Tráfico abre trafico.html (pistola USB, marcar entregados);
-         Devoluciones = el modo "devolucion" de siempre. -->
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="btn-envio" onclick="setMode('envio')">Marketplace</button>
-      <button class="mode-btn" id="btn-trafico" onclick="setMode('trafico')">Tráfico</button>
-      <button class="mode-btn" id="btn-devolucion" onclick="setMode('devolucion')">Devoluciones</button>
+    <div class="r-hoy">
+      <div class="r-hoy-num"><b id="hoy-total">—</b><span id="hoy-label">Escaneadas hoy</span></div>
+      <div class="count-summary" id="count-summary"></div>
     </div>
-    <button class="btn btn-primary" onclick="startFlow()">
-      Escanear guía
-    </button>
-    <!-- 🆕 (15-oct): UN solo apartado "Tableros del Scanner" (tableros.html)
-         que junta Envíos · Tráfico · Comparativo (envío vs tráfico, con el
-         detalle de las etiquetas que no machean). Reemplaza a los botones
-         sueltos de "Tráfico" y "Tablero de envíos" — todo vive ahí ahora. -->
-    <button class="btn btn-secondary" onclick="window.location.href = 'tableros.html'">
-      📊&nbsp; Tableros del Scanner
-    </button>
+    <div class="r-lbl">¿Qué vas a hacer?</div>
+    <div class="r-modos">
+      <button class="mode-btn active" id="btn-envio" onclick="setMode('envio')"><span class="r-e">📦</span><span><b>Marketplace</b><small>Foto de evidencia del envío</small></span></button>
+      <button class="mode-btn" id="btn-trafico" onclick="setMode('trafico')"><span class="r-e">🚚</span><span><b>Tráfico</b><small>Marcar entregado con la pistola</small></span></button>
+      <button class="mode-btn" id="btn-devolucion" onclick="setMode('devolucion')"><span class="r-e">↩️</span><span><b>Devoluciones</b><small>Registrar lo que regresa</small></span></button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary r-cta" onclick="startFlow()">Continuar →</button>
+    <button class="btn btn-secondary r-link" onclick="window.location.href = 'tableros.html'">📊&nbsp; Tableros del Scanner</button>
   </div>
 
   <!-- ── SELECCIÓN DE CANAL (envío y devolución) ─────────── -->
@@ -681,22 +720,20 @@
       <button class="back-btn" onclick="showScreen('screen-home')">&#8592;</button>
       <h2>¿Qué canal?</h2>
     </div>
-    <p class="subtitle" id="channel-select-subtitle" style="font-size:14px; margin-bottom:28px; align-self:flex-start">
+    <p class="subtitle" id="channel-select-subtitle" style="font-size:13px; margin:0 0 12px; align-self:flex-start">
       Selecciona el canal
     </p>
-    <button class="channel-btn channel-shein"  onclick="selectChannel('shein')">SHEIN</button>
-    <button class="channel-btn channel-tiktok" onclick="selectChannel('tiktok')">TikTok</button>
-    <button class="channel-btn channel-ml"     onclick="selectChannel('ml')">Mercado Libre</button>
-    <button class="channel-btn channel-amazon" onclick="selectChannel('amazon')">Amazon</button>
-    <!-- (15-sep): Walmart - primera venta 15-sep-2026. Etiqueta FedEx: se lee
-         SOLO el Code128 grande (34 digitos -> ultimos 12 = TRK#). Ver formatos/limpiarCodigo. -->
-    <button class="channel-btn channel-walmart" onclick="selectChannel('walmart')">Walmart</button>
-    <!-- 🚀 Combo (30-jul): solo envío — devolución nunca muestra este botón
-         (se oculta en startFlow()). Detecta SHEIN vs TikTok solo del código. -->
-    <button class="channel-btn channel-combo" id="btn-combo-shein-tiktok" onclick="selectChannel('shein_tiktok')">
-      SHEIN + TikTok
-      <span class="combo-sub">detecta el canal automático</span>
-    </button>
+    <div class="r-canales">
+      <button class="channel-btn channel-tiktok" onclick="selectChannel('tiktok')"><i class="r-dot d-tiktok"></i><span><b>TikTok</b><small id="hoy-tiktok"></small></span></button>
+      <button class="channel-btn channel-shein"  onclick="selectChannel('shein')"><i class="r-dot d-shein"></i><span><b>SHEIN</b><small id="hoy-shein"></small></span></button>
+      <button class="channel-btn channel-ml"     onclick="selectChannel('ml')"><i class="r-dot d-ml"></i><span><b>Mercado Libre</b><small id="hoy-ml"></small></span></button>
+      <button class="channel-btn channel-amazon" onclick="selectChannel('amazon')"><i class="r-dot d-amazon"></i><span><b>Amazon</b><small id="hoy-amazon"></small></span></button>
+      <!-- (15-sep): Walmart. Etiqueta FedEx: se lee SOLO el Code128 grande (34 digitos -> ultimos 12 = TRK#). -->
+      <button class="channel-btn channel-walmart" onclick="selectChannel('walmart')"><i class="r-dot d-walmart"></i><span><b>Walmart</b><small id="hoy-walmart"></small></span></button>
+      <!-- 🚀 Combo (30-jul): solo envío. Detecta SHEIN vs TikTok solo del código. -->
+      <button class="channel-btn channel-combo" id="btn-combo-shein-tiktok" onclick="selectChannel('shein_tiktok')"><span class="r-dots"><i class="r-dot d-shein"></i><i class="r-dot d-tiktok"></i></span><span><b>SHEIN + TikTok</b><small class="combo-sub">detecta el canal solo</small></span></button>
+    </div>
+    <p class="r-pie">Toca un canal para abrir la cámara</p>
   </div>
 
   <!-- ── SCANNER ───────────────────────────────────────────── -->
@@ -1028,7 +1065,11 @@ function setMode(mode) {
   // 🆕 (19-oct): Tráfico se selecciona igual que los otros dos y se abre
   // hasta "Escanear guía" (ver startFlow). Su conteo del día vive en
   // trafico.html / Tableros, así que aquí no se pide.
-  if (mode === 'trafico') { const el = document.getElementById('count-summary'); if (el) el.textContent = ''; return; }
+  // 🆕 (10-nov): la franja dice de qué es el número
+  const hl = document.getElementById('hoy-label');
+  if (hl) hl.textContent = mode === 'devolucion' ? 'Devoluciones hoy' : (mode === 'trafico' ? 'Tráfico: el conteo está en su pantalla' : 'Escaneadas hoy');
+  if (mode === 'trafico') { const el = document.getElementById('count-summary'); if (el) el.textContent = '';
+    const ht = document.getElementById('hoy-total'); if (ht) ht.textContent = '🚚'; return; }
   loadCounts();
 }
 
@@ -1049,6 +1090,11 @@ async function loadCounts() {
       .filter(ch => data.counts[ch] !== undefined)
       .map(ch => (CHANNEL_LABELS[ch] ? CHANNEL_LABELS[ch][0] : ch.toUpperCase()) + ' ' + data.counts[ch]);
     el.textContent = 'Hoy · ' + parts.join(' · ');
+    // 🆕 (10-nov): número grande del inicio + "hoy N" en cada canal
+    const tot = order.reduce((t, ch) => t + (Number(data.counts[ch]) || 0), 0);
+    const ht = document.getElementById('hoy-total'); if (ht) ht.textContent = tot.toLocaleString('es-MX');
+    order.forEach(ch => { const c = document.getElementById('hoy-' + ch);
+      if (c) c.textContent = data.counts[ch] !== undefined ? 'hoy ' + data.counts[ch] : ''; });
   } catch (err) {
     el.textContent = ''; // si falla, no bloquea la pantalla — solo no se muestra el conteo
   }

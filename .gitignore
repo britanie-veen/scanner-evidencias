@@ -1,2 +1,6 @@
 # Backend de Apps Script: solo local (IDs de Sheets, llave Supabase). Nunca al repo publico.
 apps_script/
+# Docs internas de Proyectos-TI: solo local, no al repo publico.
+CLAUDE.md
+PENDIENTES.md
+PARAMETROS.md

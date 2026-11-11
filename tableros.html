@@ -185,6 +185,9 @@
   .d-shein { background: #111; } .d-tiktok { background: #25f4ee; box-shadow: 2px 0 0 #fe2c55; } .d-ml { background: #ffe600; border: 1px solid #d4bf00; }
   .d-amazon { background: #ff9900; } .d-walmart { background: #0071ce; }
   .av-limite { color: #E03131; font-weight: 700; }
+  .av-btn.av-val { background: #17A34A; color: #fff; border-color: #17A34A; }
+  .av-conf { background: #FFF7D6; border: 1px solid #F0D77A; border-radius: 12px; padding: 8px 12px; font-size: 12.5px; font-weight: 400; }
+  .av-btn.av-si { background: #17A34A; color: #fff; border-color: #17A34A; margin-left: 6px; }
   /* (10-nov): con la columna de fecha límite la tabla ya no cabía y se cortaba "completa" → página más ancha y tabla más compacta */
   #app { max-width: 1240px; }
   .av-tabla th, .av-tabla td { padding-left: 12px; padding-right: 12px; }
@@ -268,7 +271,7 @@
     <div class="av-filtros">📅 Del <input type="date" id="av-desde"> al <input type="date" id="av-hasta">
       <div class="sep"></div><div class="av-chips" id="av-chips"></div></div>
     <div class="av-panel">
-      <h2>Remisiones <span>Toca una para ver qué etiquetas le faltan</span></h2>
+      <h2>Remisiones <b id="av-msg" style="font-size:13px;color:#17A34A"></b><span>Toca una para ver qué etiquetas le faltan</span></h2>
       <div class="av-scroll"><table class="av-tabla"><thead><tr><th>Remisión</th><th>Canal</th><th>Fecha de venta</th><th>Fecha límite</th><th>Avance</th><th>Escaneadas</th><th>Faltan</th><th>Piezas que faltan</th></tr></thead>
         <tbody id="av-body"><tr><td colspan="8" class="av-estado">Cargando…</td></tr></tbody></table></div>
     </div>
@@ -1239,8 +1242,33 @@ const Avance = (function () {
       return '<tr><td>' + esc(l.n) + '</td><td class="av-mono">' + esc(l.guia) + '</td><td class="av-mono">' + esc(l.pedido) + '</td><td>' +
         l.items.map(function (i) { return esc(i[0]) + ' × ' + i[1]; }).join('<br>') + '</td></tr>';
     }).join('');
-    return (conBoton ? '<div style="padding:10px 14px 0;text-align:right"><button class="av-btn" data-imp="' + esc(r.canal + '|' + r.rem) + '">🖨️ Imprimir lista</button></div>' : '') +
+    return (conBoton ? cajaValidar(r) : '') +
       '<table class="av-mini"><thead><tr><th>N°</th><th>Guía</th><th>Pedido</th><th>SKU × piezas</th></tr></thead><tbody>' + f + '</tbody></table>';
+  }
+  // 🆕 (10-nov): "Validar como completa" → el motor pone Estado = Listo en Ventas SOLO a estas etiquetas.
+  let confirmando = '', validando = '', avisoVal = {};
+  function cajaValidar(r) {
+    const k = r.canal + '|' + r.rem, n = r.faltan.length;
+    let h = '<div style="padding:10px 14px 0;display:flex;justify-content:flex-end;gap:8px;align-items:center;flex-wrap:wrap">';
+    if (avisoVal[k]) h += '<span style="font-size:12.5px;font-weight:700;color:' + (avisoVal[k].ok ? '#17A34A' : '#E03131') + '">' + esc(avisoVal[k].txt) + '</span>';
+    if (validando === k) h += '<span style="font-size:12.5px;font-weight:700">Validando…</span>';
+    else if (confirmando === k) h += '<div class="av-conf">¿Validar <b>' + esc(r.rem) + '</b> como completa? Se marcarán <b>' + fmt(n) + '</b> etiqueta' + (n === 1 ? '' : 's') + ' como <b>Listo</b> en la hoja de Ventas.' +
+      ' <button class="av-btn av-si" data-si="' + esc(k) + '">Sí, validar</button> <button class="av-btn" data-no="1">Cancelar</button></div>';
+    else h += '<button class="av-btn av-val" data-val="' + esc(k) + '">✔ Validar como completa</button>';
+    return h + '</div>';
+  }
+  function validar(k) {
+    const r = datos.remisiones.filter(function (x) { return x.canal + '|' + x.rem === k; })[0]; if (!r) return;
+    confirmando = ''; validando = k; delete avisoVal[k]; pintar();
+    fetch(APPS_SCRIPT_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ action: 'validarRemision', canal: r.canal, remision: r.rem,
+      desde: $('av-desde').value, hasta: $('av-hasta').value, guias: r.faltan.map(function (l) { return l.guia || l.pedido; }) }) })
+      .then(function (x) { return x.json(); }).then(function (res) {
+        validando = '';
+        if (!res || res.validar !== true) avisoVal[k] = { ok: false, txt: 'El motor todavía no tiene esta función (falta pegar la nueva versión).' };
+        else if (!res.ok) avisoVal[k] = { ok: false, txt: 'No se pudo: ' + res.error };
+        else { $('av-msg').textContent = '✔ ' + r.rem + ' validada como completa (' + res.filasMarcadas + ' filas en Listo)'; abiertos.delete(k); cargar(); }
+        pintar();
+      }).catch(function (e) { validando = ''; avisoVal[k] = { ok: false, txt: 'Sin conexión, intenta otra vez.' }; pintar(); });
   }
   function imprimir(k) {
     const r = datos.remisiones.filter(function (x) { return x.canal + '|' + x.rem === k; })[0]; if (!r) return;
@@ -1256,7 +1284,10 @@ const Avance = (function () {
     $('av-desde').addEventListener('change', cargar); $('av-hasta').addEventListener('change', cargar);
     $('av-chips').addEventListener('click', function (e) { const b = e.target.closest('button[data-c]'); if (!b) return; canal = b.dataset.c; pintar(); });
     $('av-body').addEventListener('click', function (e) {
-      const bi = e.target.closest('button[data-imp]'); if (bi) { imprimir(bi.dataset.imp); return; }
+      const bv = e.target.closest('button[data-val]'); if (bv) { confirmando = bv.dataset.val; pintar(); return; }
+      const bs = e.target.closest('button[data-si]'); if (bs) { validar(bs.dataset.si); return; }
+      if (e.target.closest('button[data-no]')) { confirmando = ''; pintar(); return; }
+      if (e.target.closest('.av-conf')) return;
       const tr = e.target.closest('tr.fila'); if (!tr) return;
       const k = tr.dataset.k; abiertos.has(k) ? abiertos.delete(k) : abiertos.add(k); pintar();
     });

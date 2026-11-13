@@ -711,7 +711,46 @@
     </div>
     <div class="spacer"></div>
     <button class="btn btn-primary r-cta" onclick="startFlow()">Continuar →</button>
+    <!-- 🆕 (13-nov): envíos que Elena fotografió pero no escaneó — se suben
+         después desde la galería buscando el número de la etiqueta. -->
+    <button class="btn btn-secondary r-link" onclick="irSubirTarde()">🖼️&nbsp; Subir foto que ya tomé</button>
     <button class="btn btn-secondary r-link" onclick="window.location.href = 'tableros.html'">📊&nbsp; Tableros del Scanner</button>
+  </div>
+
+  <!-- ── SUBIR FOTO QUE YA TOMÉ (13-nov) — SOLO envío ─────────
+       Pantalla propia: escribe el número de la etiqueta (o lo lee de una
+       foto), busca en Ventas de los 5 canales (action=buscarEnvioTarde) y
+       manda a screen-found con subidaTarde=true: ahí el botón de foto abre
+       la GALERÍA (varias a la vez) en vez de la cámara, y "Enviar" usa la
+       misma cola/doPost de siempre. El conteo del día es el del día que
+       se sube. ── -->
+  <div id="screen-tarde" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goHome()">&#8592;</button>
+      <h2>Subir foto que ya tomé</h2>
+    </div>
+    <p class="subtitle" style="font-size:13px; margin:0 0 12px; text-align:left">
+      Para envíos que fotografiaste pero no escaneaste. Escribe el número de la etiqueta
+      (completo o los últimos 6 dígitos) y después elige las fotos de tu galería.
+    </p>
+    <div class="queue-badge" id="queue-badge-tarde" style="display:none; position:static; margin:0 0 10px" onclick="onQueueBadgeClick()">
+      <span id="queue-badge-tarde-text"></span>
+    </div>
+    <div class="manual-entry-box" style="margin:0 0 10px; width:100%">
+      <div style="display:flex; gap:8px">
+        <input type="text" id="tarde-input" placeholder="Número de la etiqueta" autocomplete="off" autocapitalize="characters"
+               style="flex:1; min-width:0; padding:12px; border-radius:8px; border:1px solid #ccc; font-size:16px"
+               onkeydown="if (event.key === 'Enter') buscarTarde()">
+        <button class="btn btn-primary" style="width:auto; padding:10px 18px; margin:0" onclick="buscarTarde()">Buscar</button>
+      </div>
+    </div>
+    <button class="btn btn-secondary" onclick="triggerLeerTarde()">📷&nbsp; Leer el número de una foto de la etiqueta</button>
+    <input type="file" id="tarde-leer-input" accept="image/*" style="display:none" onchange="leerCodigoDeFoto(this)">
+    <div id="reader-tarde" style="display:none"></div>
+    <p class="subtitle" id="tarde-msg" style="font-size:13px; min-height:18px; margin:4px 0 8px"></p>
+    <div id="tarde-candidatos" style="display:none; width:100%"></div>
+    <div class="spacer"></div>
+    <button class="btn btn-secondary" onclick="goHome()">Terminar</button>
   </div>
 
   <!-- ── SELECCIÓN DE CANAL (envío y devolución) ─────────── -->
@@ -907,6 +946,8 @@
       Enviar evidencia
     </button>
     <button class="btn btn-secondary" onclick="scanAgainSameChannel()">Cancelar (seguir en este canal)</button>
+    <!-- 🆕 (13-nov): galería del celular, varias fotos — solo "Subir foto que ya tomé" -->
+    <input type="file" id="galeria-input" accept="image/*" multiple style="display:none" onchange="handleGaleria(this)">
     <input type="file" id="photo-input" accept="image/*" capture="environment"
            style="display:none" onchange="handlePhoto(this)">
   </div>
@@ -1026,7 +1067,7 @@ function mostrarAvisoSiYaTieneFotos_() {
 // seguir con un pedido cancelado.
 function continuarPeseACancelado_() {
   document.getElementById('cancelado-banner').style.display = 'none';
-  abrirCamaraViva();
+  if (!subidaTarde) abrirCamaraViva();   // 🆕 (13-nov): en "Subir foto que ya tomé" va la galería
   mostrarAvisoSiYaTieneFotos_();
 }
 let currentMode      = 'envio';   // 'envio' (Marketplace) | 'trafico' | 'devolucion'
@@ -1123,6 +1164,7 @@ function goHome() {
   currentEnvioData = null;
   sessionCount     = 0;
   comboSheinTiktok = false;
+  subidaTarde      = false;   // 🆕 (13-nov)
   clearPhotos();
   showScreen('screen-home');
   loadCounts();
@@ -1399,6 +1441,7 @@ function mostrarPalomitaRapida() {
 }
 
 function scanAgainSameChannel() {
+  if (subidaTarde) { volverABuscarTarde(); return; }   // 🆕 (13-nov): aquí no hay escáner
   cancelAutoAdvance();
   cerrarCamaraViva();   // 🆕 (20-ago): suelta la cámara en vivo de evidencia antes de reanudar el escáner de códigos
   currentTracking  = null;
@@ -2033,6 +2076,199 @@ async function buscarPorSufijoManual(sufijo) {
   }
 }
 
+/* ── 🆕 (13-nov): "Subir foto que ya tomé" — SOLO envío ──────────
+   La señora Elena a veces solo toma la foto del paquete y no la sube ni
+   escanea; después quiere subirla (y quitarla del celular). Este flujo
+   busca la etiqueta escribiendo el número (completo o últimos 6 dígitos,
+   en los 5 canales), muestra el paquete y deja elegir las fotos de la
+   galería. La subida es la MISMA de siempre (cola → doPost: Drive,
+   Estado Listo, Evidencia, conteo del día en que se sube). Si la etiqueta
+   ya tiene evidencia, avisa igual que al escanear (ya-banner). ── */
+let subidaTarde = false;   // true mientras se está en este flujo (galería en vez de cámara)
+
+function irSubirTarde() {
+  cancelAutoAdvance();
+  cerrarCamaraViva();
+  stopScanner();
+  subidaTarde      = true;
+  currentMode      = 'envio';
+  comboSheinTiktok = false;
+  currentChannel   = null;
+  currentTracking  = null;
+  currentRow       = null;
+  currentRows      = [];
+  currentEnvioData = null;
+  scanning         = false;
+  clearPhotos();
+  document.getElementById('tarde-candidatos').style.display = 'none';
+  document.getElementById('tarde-msg').textContent = '';
+  showScreen('screen-tarde');
+  renderQueueBadge();
+  setTimeout(function () { const i = document.getElementById('tarde-input'); if (i) i.focus(); }, 60);
+}
+function volverABuscarTarde(msg) {
+  cerrarCamaraViva();
+  clearPhotos();
+  currentTracking  = null;
+  currentRow       = null;
+  currentRows      = [];
+  currentEnvioData = null;
+  scanning         = false;
+  const i = document.getElementById('tarde-input'); if (i) i.value = '';
+  document.getElementById('tarde-candidatos').style.display = 'none';
+  document.getElementById('tarde-msg').textContent = msg || '';
+  showScreen('screen-tarde');
+  renderQueueBadge();
+}
+function triggerLeerTarde() {
+  const i = document.getElementById('tarde-leer-input');
+  i.value = '';
+  i.click();
+}
+// Intenta leer el código de barras/QR de una foto de la etiqueta (html5-qrcode.scanFile).
+// Si no lo logra, no pasa nada: se escribe a mano.
+async function leerCodigoDeFoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const msg = document.getElementById('tarde-msg');
+  msg.textContent = 'Leyendo el código de la foto…';
+  let lector = null;
+  try {
+    lector = new Html5Qrcode('reader-tarde');
+    const raw = await lector.scanFile(input.files[0], false);
+    const codigo = limpiarCodigo(raw);
+    document.getElementById('tarde-input').value = codigo;
+    msg.textContent = 'Leído: ' + codigo;
+    buscarTarde();
+  } catch (err) {
+    msg.textContent = 'No se pudo leer el código en esa foto. Escribe el número a mano.';
+  } finally {
+    try { if (lector) lector.clear(); } catch (x) { /* nada */ }
+  }
+}
+function escHtmlTarde_(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+async function buscarTarde(codigo, canal) {
+  const q = String(codigo || document.getElementById('tarde-input').value || '').trim();
+  const msg = document.getElementById('tarde-msg');
+  if (q.length < 4) { msg.textContent = 'Escribe al menos 4 caracteres del número de la etiqueta.'; return; }
+  document.getElementById('tarde-candidatos').style.display = 'none';
+  showScreen('screen-loading');
+  try {
+    let url = APPS_SCRIPT_URL + '?action=buscarEnvioTarde&q=' + encodeURIComponent(q);
+    if (canal) url += '&channel=' + encodeURIComponent(canal);
+    const res  = await fetch(url, { redirect: 'follow' });
+    const data = await res.json();
+    if (data.error) { volverABuscarTarde(data.error); return; }
+    if (data.ambiguous) { mostrarCandidatosTarde(data); return; }
+    if (!data.found) { volverABuscarTarde('No encontramos "' + q + '" en Ventas de ningún canal. Revisa el número.'); return; }
+    pintarEncontradoTarde(data);
+  } catch (err) {
+    volverABuscarTarde('Error de conexión: ' + err.message);
+  }
+}
+function mostrarCandidatosTarde(data) {
+  const box = document.getElementById('tarde-candidatos');
+  box.innerHTML =
+    '<p class="subtitle" style="font-size:13px; margin:6px 0; text-align:left">Hay ' + data.count +
+    ' etiquetas que terminan así. Toca la correcta:</p>' +
+    (data.candidatos || []).map(function (c) {
+      const l = CHANNEL_LABELS[c.channel] || [c.channel, ''];
+      return '<button class="btn btn-secondary" style="text-align:left; text-transform:none; letter-spacing:0" ' +
+             'onclick="buscarTarde(' + escHtmlTarde_(JSON.stringify(String(c.codigo))) + ', ' + escHtmlTarde_(JSON.stringify(String(c.channel))) + ')">' +
+             '<b>' + escHtmlTarde_(c.codigo) + '</b><br><small>' + escHtmlTarde_(l[0]) + ' · ' +
+             escHtmlTarde_(c.sku || '—') + ' · ' + escHtmlTarde_(c.pedido || '—') + '</small></button>';
+    }).join('');
+  box.style.display = 'block';
+  document.getElementById('tarde-msg').textContent = '';
+  showScreen('screen-tarde');
+}
+function pintarEncontradoTarde(data) {
+  currentTracking  = String(data.tracking || '');
+  currentChannel   = data.channel;
+  currentRow       = data.row;
+  currentRows      = (Array.isArray(data.rows) && data.rows.length) ? data.rows : [data.row];
+  currentEnvioData = null;
+  currentCondition = null;
+  yaTieneFotos     = Number(data.fotos) || 0;
+
+  const [text, cls] = CHANNEL_LABELS[data.channel] || ['—', ''];
+  const chBadge = document.getElementById('info-channel-badge');
+  chBadge.textContent = text;
+  chBadge.className   = 'channel-badge ' + cls;
+  document.getElementById('info-tracking').textContent = currentTracking;
+  const catalogImg = document.getElementById('info-catalog-photo');
+  catalogImg.removeAttribute('src');
+  catalogImg.style.display = 'none';
+  document.getElementById('new-entry-banner').style.display = 'none';
+  document.getElementById('manual-entry-box').style.display = 'none';
+  document.getElementById('condition-toggle').style.display = 'none';
+  document.getElementById('comment-box').style.display = 'none';
+  document.getElementById('comment-input').value = '';
+  document.getElementById('found-title').textContent = 'Subir foto de evidencia';
+  const card = document.getElementById('found-card');
+  card.style.display = '';
+  card.style.opacity = '1';
+
+  const items = (Array.isArray(data.items) && data.items.length)
+    ? data.items
+    : [{ row: data.row, sku: data.sku, qty: data.qty }];
+  if (items.length > 1) {
+    document.getElementById('info-sku').innerHTML = items.map(function (it) {
+      return '<div class="sku-linea"><span class="sku-nombre">' + escHtmlTarde_(it.sku || '—') +
+             '</span><span class="sku-pzas">' + (it.qty != null ? escHtmlTarde_(it.qty) + ' pz' : '') + '</span></div>';
+    }).join('');
+    const total = items.reduce(function (s, it) { return s + (Number(it.qty) || 0); }, 0);
+    document.getElementById('info-qty').textContent = items.length + ' productos · ' + total + ' pz';
+  } else {
+    document.getElementById('info-sku').textContent = items[0].sku || '—';
+    document.getElementById('info-qty').textContent = (items[0].qty != null ? items[0].qty + ' pz' : '—');
+  }
+  const rowRemision = document.getElementById('row-remision');
+  rowRemision.style.display = (data.remision !== undefined && data.remision !== '' && data.remision !== null) ? 'flex' : 'none';
+  document.getElementById('info-remision').textContent = data.remision || '—';
+  document.getElementById('info-pedido').textContent = data.pedido || '—';
+  const statusEl = document.getElementById('info-status');
+  statusEl.textContent = data.status || '—';
+  statusEl.className   = 'status-badge ' + (
+    data.status === 'Listo'      ? 'status-listo'      :
+    data.status === 'Devolución' ? 'status-devolucion' :
+    'status-proceso'
+  );
+  const modeIndicator = document.getElementById('found-mode-indicator');
+  modeIndicator.style.display = '';
+  modeIndicator.classList.remove('devolucion');
+  document.getElementById('found-mode-label').textContent = 'Marketplace · fotos de la galería';
+
+  cerrarCamaraViva();
+  clearPhotos();
+  if (data.status === 'Cancelado') {
+    document.getElementById('cancelado-banner').style.display = 'flex';
+    document.getElementById('ya-banner').style.display = 'none';
+    document.getElementById('photo-btn').style.display = 'none';
+  } else {
+    document.getElementById('cancelado-banner').style.display = 'none';
+    mostrarAvisoSiYaTieneFotos_();
+  }
+  showScreen('screen-found');
+}
+function triggerGaleria() {
+  const i = document.getElementById('galeria-input');
+  i.value = '';
+  i.click();
+}
+async function handleGaleria(input) {
+  if (!input.files || !input.files.length) return;
+  const files = Array.from(input.files).slice(0, 10);   // tope sano por envío
+  for (const f of files) {
+    currentThumbs.push(URL.createObjectURL(f));
+    currentPhotos.push(await compressImage(f));
+  }
+  renderPhotos();
+}
+
 /* ── Fotos (varias por etiqueta) ───────────────────────────── */
 // Elena toma las fotos que necesite —la etiqueta, la caja, el pedido— y
 // se le van acumulando en miniatura. No hay número fijo: con una basta,
@@ -2063,6 +2299,7 @@ async function handlePhoto(input) {
 // VIVO ya abierta (sin abrir nada nuevo, sin pedir permiso otra vez); en
 // Devolución sigue abriendo la cámara nativa del celular, como siempre.
 function handleTomarFotoClick() {
+  if (subidaTarde) { triggerGaleria(); return; }   // 🆕 (13-nov)
   if (currentMode === 'envio') {
     capturarFotoEnvioViva();
   } else {
@@ -2175,7 +2412,9 @@ function renderPhotos() {
   count.textContent    = n === 1 ? '1 foto tomada' : n + ' fotos tomadas';
   sendBt.style.display = n ? 'block' : 'none';
   sendBt.textContent   = n === 1 ? 'Enviar evidencia' : 'Enviar ' + n + ' fotos';
-  photoBt.textContent  = n ? '📸  Agregar otra foto' : '📸  Tomar foto de evidencia';
+  photoBt.textContent  = subidaTarde
+    ? (n ? '🖼️  Agregar otra de la galería' : '🖼️  Elegir fotos de la galería')
+    : (n ? '📸  Agregar otra foto' : '📸  Tomar foto de evidencia');
 }
 
 // 🚀 Velocidad (28-jul): bajamos el tamaño/calidad de compresión — MAX de
@@ -2251,6 +2490,12 @@ function submitPhoto() {
   };
 
   encolarSubida(payload);
+  if (subidaTarde) {              // 🆕 (13-nov): sin escáner — vuelve a la búsqueda
+    const trk = currentTracking;
+    cancelAutoAdvance();
+    volverABuscarTarde('✓ ' + trk + ' en fila para subir (' + n + (n === 1 ? ' foto' : ' fotos') + '). Busca la siguiente.');
+    return;
+  }
   sessionCount++;                 // cuenta al escanear, no al confirmar — la confirmación real la da el badge
   renderSession();
   clearPhotos();
@@ -2336,8 +2581,14 @@ async function procesarCola() {
 }
 
 function renderQueueBadge() {
-  const el  = document.getElementById('queue-badge');
-  const txt = document.getElementById('queue-badge-text');
+  // 🆕 (13-nov): la misma insignia también vive en "Subir foto que ya tomé"
+  [['queue-badge', 'queue-badge-text'], ['queue-badge-tarde', 'queue-badge-tarde-text']].forEach(function (par) {
+    renderQueueBadgeEn_(par[0], par[1]);
+  });
+}
+function renderQueueBadgeEn_(idEl, idTxt) {
+  const el  = document.getElementById(idEl);
+  const txt = document.getElementById(idTxt);
   if (!el || !txt) return;
   const pendientes = uploadQueue.length;
   const fallidos   = failedQueue.length;

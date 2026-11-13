@@ -156,7 +156,9 @@
   .aviso { background: #FFF7E6; border: 1px solid #F0D9A0; border-radius: 4px; padding: 12px 16px; font-size: 12px; font-weight: 300; color: var(--amber); margin-bottom: 16px; line-height: 1.5; }
 
   /* ══ 🆕 (10-nov-2026) Franja de resumen + pestañas en grupos + pestaña Avance ══ */
-  .resumen { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .resumen { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+  /* 🆕 (13-nov): marca "urgente" en la tabla de Avance = filas cuya fecha límite es la más cercana (tarjeta Urgentes) */
+  .av-urg { display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: #E03131; border-radius: 999px; padding: 2px 7px; vertical-align: middle; white-space: nowrap; }
   .rc { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; min-width: 0; }
   .rc .k { font-size: 11px; color: #767676; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
   .rc .v { font-size: 28px; font-weight: 900; margin-top: 4px; line-height: 1.15; overflow-wrap: anywhere; }
@@ -251,6 +253,8 @@
     <div class="rc rojo"><div class="k">Atraso</div><div class="v" id="rs-atraso">—</div><div class="d" id="rs-atraso-d">etiquetas</div></div>
     <div class="rc"><div class="k">Más vieja abierta</div><div class="v" id="rs-vieja" style="font-size:24px">—</div><div class="d" id="rs-vieja-d"></div></div>
     <div class="rc"><div class="k">Remisiones</div><div class="v" id="rs-rem">—</div><div class="d" id="rs-rem-d"></div></div>
+    <!-- 🆕 (13-nov): fecha límite más cercana (de hoy en adelante) que todavía tiene remisiones sin terminar, y cuánto falta para ese día -->
+    <div class="rc" id="rs-urg-card"><div class="k">Urgentes</div><div class="v" id="rs-urg" style="font-size:24px">—</div><div class="d" id="rs-urg-d"></div></div>
   </div>
 
   <div class="nav-grupos">
@@ -1190,6 +1194,7 @@ const Avance = (function () {
   function fdia(iso) { if (!iso) return '—'; const d = new Date(iso + 'T12:00:00'); return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MES[d.getMonth()]; }
   // 🆕 (10-nov): fecha límite = 3 días hábiles (lunes a viernes) después de la fecha de venta. Regla de Britanie.
   function limite(f) { if (!f) return ''; const d = new Date(f + 'T12:00:00'); let n = 0; while (n < 3) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; } return iso(d); }
+  function fcorta(f) { const d = new Date(f + 'T12:00:00'); const s = DIAS[d.getDay()] + ' ' + d.getDate(); return s.charAt(0).toUpperCase() + s.slice(1); }
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function cargar() {
     pedidoEn = Date.now();
@@ -1224,13 +1229,34 @@ const Avance = (function () {
     $('rs-vieja-d').textContent = vieja ? NOM[vieja.canal] + ' · ' + fdia(vieja.fecha) + ' · faltan ' + fmt(vieja.faltan.length) : 'sin atraso';
     $('rs-rem').innerHTML = ab.length + '<span style="font-size:14px;color:#767676;font-weight:300"> abiertas</span>';
     $('rs-rem-d').textContent = (rs.length - ab.length) + ' completas en el periodo';
+    // 🆕 (13-nov): Urgentes = la fecha límite más cercana (hoy o después) entre las remisiones abiertas.
+    // Las ya vencidas no la tapan (ésas viven en Atraso / Más vieja abierta); solo se cuentan al final.
+    const hoyISO = iso(new Date());
+    const conLim = ab.map(function (r) { return { r: r, lim: limite(r.fecha) }; });
+    const porVenir = conLim.filter(function (x) { return x.lim >= hoyISO; }).sort(function (a, b) { return a.lim < b.lim ? -1 : a.lim > b.lim ? 1 : 0; });
+    const limUrg = porVenir.length ? porVenir[0].lim : '';
+    const vencidas = conLim.length - porVenir.length;
+    const cardUrg = $('rs-urg-card');
+    if (limUrg) {
+      const deEsa = porVenir.filter(function (x) { return x.lim === limUrg; });
+      const etq = deEsa.reduce(function (a, x) { return a + x.r.faltan.length; }, 0);
+      const pzs = deEsa.reduce(function (a, x) { return a + (x.r.piezas - x.r.pz_esc); }, 0);
+      $('rs-urg').textContent = limUrg === hoyISO ? 'HOY' : fcorta(limUrg);
+      cardUrg.classList.toggle('rojo', limUrg === hoyISO);
+      $('rs-urg-d').textContent = deEsa.length + (deEsa.length === 1 ? ' remisión' : ' remisiones') + ' · faltan ' + fmt(etq) + ' etiquetas · ' + fmt(pzs) + ' piezas' +
+        (vencidas ? ' · +' + vencidas + (vencidas === 1 ? ' vencida' : ' vencidas') : '');
+    } else {
+      $('rs-urg').textContent = '—';
+      cardUrg.classList.remove('rojo');
+      $('rs-urg-d').textContent = vencidas ? 'solo ' + vencidas + (vencidas === 1 ? ' vencida' : ' vencidas') + ' (ver Atraso)' : 'nada pendiente';
+    }
     const filas = rs.slice().sort(function (a, b) {
       return (b.faltan.length > 0) - (a.faltan.length > 0) || (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0) || (a.rem < b.rem ? -1 : 1);
     });
     if (!filas.length) { $('av-body').innerHTML = '<tr><td colspan="8" class="av-estado">No hay remisiones en ese periodo.</td></tr>'; return; }
     $('av-body').innerHTML = filas.map(function (r) {
       const p = r.total ? Math.round(r.esc / r.total * 100) : 0, k = r.canal + '|' + r.rem;
-      let h = '<tr class="fila" data-k="' + esc(k) + '"><td><b>' + esc(r.rem) + '</b></td><td><span class="av-dot d-' + r.canal + '"></span>' + NOM[r.canal] + '</td><td>' + fdia(r.fecha) + '</td><td class="av-limite">' + fdia(limite(r.fecha)) + '</td>' +
+      let h = '<tr class="fila" data-k="' + esc(k) + '"><td><b>' + esc(r.rem) + '</b></td><td><span class="av-dot d-' + r.canal + '"></span>' + NOM[r.canal] + '</td><td>' + fdia(r.fecha) + '</td><td class="av-limite">' + fdia(limite(r.fecha)) + (r.faltan.length && limUrg && limite(r.fecha) === limUrg ? '<span class="av-urg">⚑ urgente</span>' : '') + '</td>' +
         '<td><div class="av-pb"><i style="width:' + p + '%"></i></div></td><td>' + fmt(r.esc) + ' / ' + fmt(r.total) + ' · ' + p + '%</td>' +
         '<td class="' + (r.faltan.length ? 'av-falta' : 'av-listo') + '">' + (r.faltan.length ? fmt(r.faltan.length) : '✔ completa') + '</td><td>' + (r.faltan.length ? fmt(r.piezas - r.pz_esc) : '') + '</td></tr>';
       if (abiertos.has(k) && r.faltan.length) h += '<tr class="av-det"><td colspan="8">' + listaFaltan(r, true) + '</td></tr>';
